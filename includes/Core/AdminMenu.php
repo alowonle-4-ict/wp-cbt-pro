@@ -1,0 +1,157 @@
+<?php
+
+declare(strict_types=1);
+
+namespace WPCBTPro\Core;
+
+use WPCBTPro\Camera\VerificationAdminController;
+use WPCBTPro\Candidates\CandidatesAdminController;
+use WPCBTPro\DSA\DsaQuestionsAdminController;
+use WPCBTPro\Exams\ExamsAdminController;
+use WPCBTPro\Import\Word\WordImportAdminController;
+use WPCBTPro\Monitoring\InvigilatorDashboardController;
+use WPCBTPro\Programming\ExecutionSettingsController;
+use WPCBTPro\Programming\ProgrammingQuestionsAdminController;
+use WPCBTPro\Results\ResultsAdminController;
+use WPCBTPro\Security\Capabilities;
+
+final class AdminMenu
+{
+    public function __construct(
+        private readonly CandidatesAdminController $candidatesController,
+        private readonly WordImportAdminController $wordImportController,
+        private readonly ExamsAdminController $examsController,
+        private readonly InvigilatorDashboardController $invigilatorController,
+        private readonly VerificationAdminController $verificationController,
+        private readonly ProgrammingQuestionsAdminController $programmingController,
+        private readonly ExecutionSettingsController $settingsController,
+        private readonly DsaQuestionsAdminController $dsaController,
+        private readonly ResultsAdminController $resultsController,
+    ) {
+    }
+
+    public function register(): void
+    {
+        add_action('admin_menu', [$this, 'addMenuPages']);
+        add_action('admin_enqueue_scripts', [$this, 'enqueueAssets']);
+    }
+
+    public function addMenuPages(): void
+    {
+        add_menu_page(
+            __('WP CBT Pro', 'wp-cbt-pro'),
+            __('CBT', 'wp-cbt-pro'),
+            Capabilities::MANAGE_CBT_EXAMS,
+            'wpcbtpro-exams',
+            [$this->examsController, 'render'],
+            'dashicons-welcome-learn-more',
+            26
+        );
+
+        add_submenu_page(
+            'wpcbtpro-exams',
+            __('Exams', 'wp-cbt-pro'),
+            __('Exams', 'wp-cbt-pro'),
+            Capabilities::MANAGE_CBT_EXAMS,
+            'wpcbtpro-exams',
+            [$this->examsController, 'render']
+        );
+
+        add_submenu_page(
+            'wpcbtpro-exams',
+            __('Candidates', 'wp-cbt-pro'),
+            __('Candidates', 'wp-cbt-pro'),
+            Capabilities::MANAGE_CBT_CANDIDATES,
+            'wpcbtpro-candidates',
+            [$this->candidatesController, 'render']
+        );
+
+        add_submenu_page(
+            'wpcbtpro-exams',
+            __('Import Questions', 'wp-cbt-pro'),
+            __('Import Questions', 'wp-cbt-pro'),
+            Capabilities::MANAGE_CBT_QUESTIONS,
+            'wpcbtpro-import-questions',
+            [$this->wordImportController, 'render']
+        );
+
+        add_submenu_page(
+            'wpcbtpro-exams',
+            __('Invigilator Dashboard', 'wp-cbt-pro'),
+            __('Invigilator', 'wp-cbt-pro'),
+            Capabilities::VIEW_MONITORING,
+            'wpcbtpro-invigilator',
+            [$this->invigilatorController, 'render']
+        );
+
+        add_submenu_page(
+            'wpcbtpro-exams',
+            __('Identity Verification Review', 'wp-cbt-pro'),
+            __('Verification Review', 'wp-cbt-pro'),
+            Capabilities::REVIEW_ATTEMPTS,
+            'wpcbtpro-verification',
+            [$this->verificationController, 'render']
+        );
+
+        add_submenu_page(
+            'wpcbtpro-exams',
+            __('Programming Questions', 'wp-cbt-pro'),
+            __('Programming Questions', 'wp-cbt-pro'),
+            Capabilities::MANAGE_PROGRAMMING_QUESTIONS,
+            'wpcbtpro-programming',
+            [$this->programmingController, 'render']
+        );
+
+        add_submenu_page(
+            'wpcbtpro-exams',
+            __('DSA Questions', 'wp-cbt-pro'),
+            __('DSA Questions', 'wp-cbt-pro'),
+            Capabilities::MANAGE_DSA_QUESTIONS,
+            'wpcbtpro-dsa',
+            [$this->dsaController, 'render']
+        );
+
+        add_submenu_page(
+            'wpcbtpro-exams',
+            __('Results', 'wp-cbt-pro'),
+            __('Results', 'wp-cbt-pro'),
+            Capabilities::VIEW_CBT_RESULTS,
+            'wpcbtpro-results',
+            [$this->resultsController, 'render']
+        );
+
+        add_submenu_page(
+            'wpcbtpro-exams',
+            __('CBT Settings', 'wp-cbt-pro'),
+            __('Settings', 'wp-cbt-pro'),
+            Capabilities::MANAGE_CBT,
+            'wpcbtpro-settings',
+            [$this->settingsController, 'render']
+        );
+    }
+
+    public function enqueueAssets(string $hook): void
+    {
+        if (!str_contains($hook, 'wpcbtpro')) {
+            return;
+        }
+
+        wp_enqueue_style(
+            'wpcbtpro-admin',
+            WPCBTPRO_URL . 'admin/css/admin.css',
+            [],
+            WPCBTPRO_VERSION
+        );
+        wp_enqueue_media();
+
+        if (str_contains($hook, 'wpcbtpro-import-questions')) {
+            wp_enqueue_script(
+                'wpcbtpro-mathjax',
+                apply_filters('wpcbtpro_mathjax_src', 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/mml-chtml.js'),
+                [],
+                null,
+                true
+            );
+        }
+    }
+}

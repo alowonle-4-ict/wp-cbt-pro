@@ -1,0 +1,151 @@
+<?php
+
+declare(strict_types=1);
+
+namespace WPCBTPro\DSA;
+
+use WPCBTPro\Institutions\InstitutionContext;
+use WPCBTPro\Questions\QuestionRepository;
+use WPCBTPro\Questions\Types\Dsa\DsaAdminEditor;
+use WPCBTPro\Security\AuditLogger;
+use WPCBTPro\Security\Capabilities;
+
+final class DsaQuestionsAdminController
+{
+    public function __construct(
+        private readonly QuestionRepository $questions,
+        private readonly DsaQuestionRepository $dsaQuestions,
+        private readonly DsaAdminEditor $editor,
+        private readonly InstitutionContext $institutionContext,
+    ) {
+    }
+
+    public function render(): void
+    {
+        if (!current_user_can(Capabilities::MANAGE_DSA_QUESTIONS)) {
+            wp_die(esc_html__('You do not have permission to manage DSA questions.', 'wp-cbt-pro'));
+        }
+
+        $action = sanitize_key($_GET['action'] ?? 'list');
+
+        if ($action === 'delete') {
+            $this->handleDelete();
+            return;
+        }
+
+        $errors = [];
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['wpcbtpro_dsa_nonce'])) {
+            $errors = $this->handleSave();
+            if ($errors === []) {
+                return;
+            }
+            $action = empty($_POST['question_id']) ? 'new' : 'edit';
+        }
+
+        if (in_array($action, ['new', 'edit'], true)) {
+            $this->renderForm($action, $errors);
+            return;
+        }
+
+        $this->renderList();
+    }
+
+    private function renderList(): void
+    {
+        $institutionId = $this->institutionContext->currentId();
+        $questions = $this->questions->paginate(['institution_id' => $institutionId, 'per_page' => 100]);
+        $questions = array_values(array_filter($questions, static fn (array $q): bool => $q['type'] === 'dsa'));
+
+        $addUrl = add_query_arg(['page' => 'wpcbtpro-dsa', 'action' => 'new'], admin_url('admin.php'));
+
+        include WPCBTPRO_PATH . 'admin/views/dsa-list.php';
+    }
+
+    private function renderForm(string $action, array $errors): void
+    {
+        $question = null;
+
+        if ($action === 'edit') {
+            $id = (int) ($_GET['id'] ?? $_POST['question_id'] ?? 0);
+            $question = $this->questions->find($id);
+            if ($question === null || $question['type'] !== 'dsa') {
+                wp_die(esc_html__('DSA question not found.', 'wp-cbt-pro'));
+            }
+        }
+
+        $editor = $this->editor;
+
+        include WPCBTPRO_PATH . 'admin/views/dsa-form.php';
+    }
+
+    /** @return array<string, string> */
+    private function handleSave(): array
+    {
+        check_admin_referer('wpcbtpro_save_dsa', 'wpcbtpro_dsa_nonce');
+
+        $id = (int) ($_POST['question_id'] ?? 0);
+        $content = wp_kses_post(wp_unslash($_POST['content'] ?? ''));
+        $marks = (float) ($_POST['marks'] ?? 0);
+
+        $errors = [];
+        if (trim(wp_strip_all_tags($content)) === '') {
+            $errors['content'] = __('A question prompt is required.', 'wp-cbt-pro');
+        }
+        if ($marks <= 0) {
+            $errors['marks'] = __('Marks must be greater than zero.', 'wp-cbt-pro');
+        }
+
+        $extracted = null;
+        try {
+            $extracted = $this->editor->extract(wp_unslash($_POST));
+        } catch (\InvalidArgumentException $e) {
+            $errors['operations'] = $e->getMessage();
+        }
+
+        if ($errors !== []) {
+            return $errors;
+        }
+
+        $coreData = [
+            'type' => 'dsa',
+            'content' => $content,
+            'subject' => sanitize_text_field(wp_unslash($_POST['subject'] ?? '')),
+            'topic' => sanitize_text_field(wp_unslash($_POST['topic'] ?? '')),
+            'marks' => $marks,
+            'negative_marks' => 0,
+            'status' => 'active',
+        ];
+
+        if ($id === 0) {
+            $coreData['institution_id'] = $this->institutionContext->requireCurrentId();
+            $coreData['author_id'] = get_current_user_id();
+            $id = $this->questions->insert($coreData);
+            AuditLogger::record('question.created', 'question', $id, ['type' => 'dsa']);
+        } else {
+            $this->questions->update($id, $coreData);
+            AuditLogger::record('question.updated', 'question', $id);
+        }
+
+        $this->dsaQuestions->upsert($id, $extracted['dsa']);
+
+        wp_safe_redirect(add_query_arg([
+            'page' => 'wpcbtpro-dsa',
+            'action' => 'edit',
+            'id' => $id,
+            'saved' => 1,
+        ], admin_url('admin.php')));
+        exit;
+    }
+
+    private function handleDelete(): void
+    {
+        $id = (int) ($_GET['id'] ?? 0);
+        check_admin_referer('wpcbtpro_delete_dsa_' . $id);
+
+        $this->questions->delete($id);
+        AuditLogger::record('question.deleted', 'question', $id);
+
+        wp_safe_redirect(add_query_arg(['page' => 'wpcbtpro-dsa', 'deleted' => 1], admin_url('admin.php')));
+        exit;
+    }
+}

@@ -1,0 +1,153 @@
+<?php
+
+declare(strict_types=1);
+
+namespace WPCBTPro\Import\Word;
+
+use WPCBTPro\Institutions\InstitutionContext;
+use WPCBTPro\Questions\QuestionRepository;
+use WPCBTPro\Security\AuditLogger;
+use WPCBTPro\Security\Capabilities;
+
+/**
+ * Upload -> parse -> preview -> confirm (§6.1). Parsed rows live in a
+ * transient keyed by a random session id between requests; nothing reaches
+ * wp_cbt_questions until handleConfirm() runs against explicitly checked
+ * rows.
+ */
+final class WordImportAdminController
+{
+    private const TRANSIENT_PREFIX = 'wpcbtpro_import_';
+
+    public function __construct(
+        private readonly WordImportService $importService,
+        private readonly QuestionRepository $questionRepository,
+        private readonly InstitutionContext $institutionContext,
+    ) {
+    }
+
+    public function render(): void
+    {
+        if (!current_user_can(Capabilities::MANAGE_CBT_QUESTIONS)) {
+            wp_die(esc_html__('You do not have permission to manage questions.', 'wp-cbt-pro'));
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['wpcbtpro_import_upload_nonce'])) {
+            $this->handleUpload();
+            return;
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['wpcbtpro_import_confirm_nonce'])) {
+            $this->handleConfirm();
+            return;
+        }
+
+        $session = sanitize_key($_GET['session'] ?? '');
+        $rows = $session !== '' ? get_transient(self::TRANSIENT_PREFIX . $session) : false;
+
+        if ($rows !== false) {
+            $this->renderPreview($session, $rows);
+            return;
+        }
+
+        $this->renderUploadForm();
+    }
+
+    private function renderUploadForm(): void
+    {
+        $templateUrl = WPCBTPRO_URL . 'templates/wp-cbt-pro-question-template.docx';
+        include WPCBTPRO_PATH . 'admin/views/import-upload.php';
+    }
+
+    /** @param array<int, array<string, mixed>> $rows */
+    private function renderPreview(string $session, array $rows): void
+    {
+        $mathmlAllowedHtml = array_merge(wp_kses_allowed_html('post'), OmmlToMathMlConverter::allowedKsesTags());
+        include WPCBTPRO_PATH . 'admin/views/import-preview.php';
+    }
+
+    private function handleUpload(): void
+    {
+        check_admin_referer('wpcbtpro_word_import_upload', 'wpcbtpro_import_upload_nonce');
+
+        if (empty($_FILES['wpcbtpro_docx']['name'])) {
+            wp_die(esc_html__('No file was uploaded.', 'wp-cbt-pro'));
+        }
+
+        $filename = sanitize_file_name($_FILES['wpcbtpro_docx']['name']);
+        if (strtolower((string) pathinfo($filename, PATHINFO_EXTENSION)) !== 'docx') {
+            wp_die(esc_html__('Please upload a .docx file.', 'wp-cbt-pro'));
+        }
+
+        $tmpPath = $_FILES['wpcbtpro_docx']['tmp_name'];
+        if (!is_uploaded_file($tmpPath)) {
+            wp_die(esc_html__('The upload could not be verified.', 'wp-cbt-pro'));
+        }
+
+        try {
+            $rows = $this->importService->parseFile($tmpPath);
+        } catch (\Throwable $e) {
+            wp_die(esc_html(sprintf(
+                /* translators: %s: underlying error message */
+                __('Could not read this file: %s', 'wp-cbt-pro'),
+                $e->getMessage()
+            )));
+        }
+
+        if ($rows === []) {
+            wp_die(esc_html__('No "QUESTION" blocks were found in this document. Use the downloadable template as a starting point.', 'wp-cbt-pro'));
+        }
+
+        $session = wp_generate_password(16, false, false);
+        set_transient(self::TRANSIENT_PREFIX . $session, $rows, HOUR_IN_SECONDS);
+
+        wp_safe_redirect(add_query_arg([
+            'page' => 'wpcbtpro-import-questions',
+            'session' => $session,
+        ], admin_url('admin.php')));
+        exit;
+    }
+
+    private function handleConfirm(): void
+    {
+        $session = sanitize_key($_POST['session'] ?? '');
+        check_admin_referer('wpcbtpro_word_import_confirm_' . $session, 'wpcbtpro_import_confirm_nonce');
+
+        $rows = get_transient(self::TRANSIENT_PREFIX . $session);
+        if ($rows === false) {
+            wp_die(esc_html__('This import session has expired. Please upload the file again.', 'wp-cbt-pro'));
+        }
+
+        $selected = array_map('intval', (array) ($_POST['rows'] ?? []));
+        $institutionId = $this->institutionContext->requireCurrentId();
+
+        $imported = 0;
+        foreach ($rows as $index => $row) {
+            if (!in_array($index, $selected, true) || $row['mapped'] === null) {
+                continue;
+            }
+
+            $mapped = $row['mapped'];
+            $options = $mapped['options'] ?? [];
+            unset($mapped['options']);
+
+            $questionId = $this->questionRepository->insert(array_merge($mapped, [
+                'institution_id' => $institutionId,
+                'author_id' => get_current_user_id(),
+                'status' => 'active',
+            ]), $options);
+
+            AuditLogger::record('question.imported', 'question', $questionId, ['source' => 'word_import']);
+            $imported++;
+        }
+
+        delete_transient(self::TRANSIENT_PREFIX . $session);
+
+        wp_safe_redirect(add_query_arg([
+            'page' => 'wpcbtpro-import-questions',
+            'imported' => $imported,
+            'total' => count($selected),
+        ], admin_url('admin.php')));
+        exit;
+    }
+}
