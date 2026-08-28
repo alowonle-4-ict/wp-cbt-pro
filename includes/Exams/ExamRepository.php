@@ -148,7 +148,7 @@ final class ExamRepository
             $wpdb->insert($this->examQuestionsTable(), [
                 'exam_id' => $examId,
                 'question_id' => (int) $assignment['question_id'],
-                'pool_id' => $assignment['pool_id'] !== '' ? ($assignment['pool_id'] ?? null) : null,
+                'pool_id' => !empty($assignment['pool_id']) ? $assignment['pool_id'] : null,
                 'sort_order' => $assignment['sort_order'] ?? 0,
             ]);
         }
