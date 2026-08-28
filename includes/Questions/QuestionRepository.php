@@ -210,6 +210,29 @@ final class QuestionRepository
         return $wpdb->update($this->table(), $data, ['id' => $id]) !== false;
     }
 
+    /**
+     * Replaces the full option list for a question — the MCQ/True-False
+     * counterpart to insert()'s $options handling, for editing an existing
+     * question rather than creating one.
+     *
+     * @param array<int, array{label:string, is_correct?:bool, sort_order?:int}> $options
+     */
+    public function replaceOptions(int $questionId, array $options): void
+    {
+        global $wpdb;
+
+        $wpdb->delete($this->optionsTable(), ['question_id' => $questionId]);
+
+        foreach ($options as $option) {
+            $wpdb->insert($this->optionsTable(), [
+                'question_id' => $questionId,
+                'label' => $option['label'],
+                'is_correct' => !empty($option['is_correct']) ? 1 : 0,
+                'sort_order' => $option['sort_order'] ?? 0,
+            ]);
+        }
+    }
+
     public function delete(int $id): bool
     {
         global $wpdb;

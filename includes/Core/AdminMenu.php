@@ -12,6 +12,7 @@ use WPCBTPro\Import\Word\WordImportAdminController;
 use WPCBTPro\Monitoring\InvigilatorDashboardController;
 use WPCBTPro\Programming\ExecutionSettingsController;
 use WPCBTPro\Programming\ProgrammingQuestionsAdminController;
+use WPCBTPro\Questions\McqQuestionsAdminController;
 use WPCBTPro\Results\ResultsAdminController;
 use WPCBTPro\Security\Capabilities;
 
@@ -27,6 +28,7 @@ final class AdminMenu
         private readonly ExecutionSettingsController $settingsController,
         private readonly DsaQuestionsAdminController $dsaController,
         private readonly ResultsAdminController $resultsController,
+        private readonly McqQuestionsAdminController $mcqController,
     ) {
     }
 
@@ -91,6 +93,15 @@ final class AdminMenu
             Capabilities::REVIEW_ATTEMPTS,
             'wpcbtpro-verification',
             [$this->verificationController, 'render']
+        );
+
+        add_submenu_page(
+            'wpcbtpro-exams',
+            __('Questions', 'wp-cbt-pro'),
+            __('Questions', 'wp-cbt-pro'),
+            Capabilities::MANAGE_CBT_QUESTIONS,
+            'wpcbtpro-questions',
+            [$this->mcqController, 'render']
         );
 
         add_submenu_page(

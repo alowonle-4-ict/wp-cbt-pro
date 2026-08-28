@@ -55,6 +55,7 @@ use WPCBTPro\Programming\ProgrammingQuestionRepository;
 use WPCBTPro\Programming\ProgrammingQuestionsAdminController;
 use WPCBTPro\Programming\Registry\LanguageRegistry;
 use WPCBTPro\Programming\Registry\LanguageServiceProvider;
+use WPCBTPro\Questions\McqQuestionsAdminController;
 use WPCBTPro\Questions\QuestionRepository;
 use WPCBTPro\Questions\Registry\QuestionTypeRegistry;
 use WPCBTPro\Questions\Registry\QuestionTypeServiceProvider;
@@ -282,7 +283,8 @@ final class Plugin
                 $c->get(ProgrammingQuestionsAdminController::class),
                 $c->get(ExecutionSettingsController::class),
                 $c->get(DsaQuestionsAdminController::class),
-                $c->get(ResultsAdminController::class)
+                $c->get(ResultsAdminController::class),
+                $c->get(McqQuestionsAdminController::class)
             )
         );
 
@@ -302,6 +304,15 @@ final class Plugin
                 $c->get(QuestionRepository::class),
                 $c->get(DsaQuestionRepository::class),
                 $c->get(DsaAdminEditor::class),
+                $c->get(InstitutionContext::class)
+            )
+        );
+
+        $this->container->set(
+            McqQuestionsAdminController::class,
+            fn (ServiceContainer $c) => new McqQuestionsAdminController(
+                $c->get(QuestionRepository::class),
+                $c->get(QuestionTypeRegistry::class),
                 $c->get(InstitutionContext::class)
             )
         );
