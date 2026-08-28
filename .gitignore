@@ -4,4 +4,3 @@
 .DS_Store
 .phpunit.result.cache
 /.wordpress-core/
-/tests/integration/wp-tests-config.php

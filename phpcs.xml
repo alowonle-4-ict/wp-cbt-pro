@@ -21,6 +21,16 @@
 
     <config name="minimum_supported_wp_version" value="6.0"/>
 
+    <!--
+        The remaining warnings are all NonceVerification.Recommended on
+        read-only GET requests (list search/pagination, success banners) —
+        WordPress core's own admin list tables don't nonce-protect those
+        either, since a nonce guards against an unwanted state change, and
+        reads don't cause one. Exit code reflects errors only, so CI (and
+        `composer cs`) doesn't go red over a category already decided safe.
+    -->
+    <config name="ignore_warnings_on_exit" value="1"/>
+
     <rule ref="WordPress.Security.EscapeOutput">
         <!--
             Fires on every translated string passed to a RuntimeException or

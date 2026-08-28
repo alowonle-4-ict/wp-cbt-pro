@@ -1,0 +1,109 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  lint-and-unit:
+    name: Lint + unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, dom, zip, mysqli, pdo_mysql, gd
+          coverage: none
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+
+      - name: composer install
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: PHP lint
+        run: find includes admin public -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: phpcs
+        run: composer cs -- --report=full
+
+      - name: PHPUnit (unit)
+        run: composer test
+
+  integration:
+    name: Integration tests (WordPress + MySQL)
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: wpcbtpro_test
+          MYSQL_USER: wpcbtpro_test
+          MYSQL_PASSWORD: wpcbtpro_test_pw
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      WPCBTPRO_TEST_DB_NAME: wpcbtpro_test
+      WPCBTPRO_TEST_DB_USER: wpcbtpro_test
+      WPCBTPRO_TEST_DB_PASSWORD: wpcbtpro_test_pw
+      WPCBTPRO_TEST_DB_HOST: 127.0.0.1:3306
+      WPCBTPRO_TEST_WP_CORE_DIR: ${{ github.workspace }}/.wordpress-core/wordpress/
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, dom, zip, mysqli, pdo_mysql, gd
+          coverage: none
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+
+      - name: composer install
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Cache WordPress core
+        id: wp-core-cache
+        uses: actions/cache@v4
+        with:
+          path: .wordpress-core
+          key: wordpress-core-${{ hashFiles('composer.lock') }}
+
+      - name: Download WordPress core
+        if: steps.wp-core-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p .wordpress-core
+          curl -sSL -o .wordpress-core/wordpress.zip https://wordpress.org/latest.zip
+          unzip -q .wordpress-core/wordpress.zip -d .wordpress-core
+          rm .wordpress-core/wordpress.zip
+
+      - name: Wait for MySQL
+        run: |
+          for i in $(seq 1 30); do
+            mysqladmin ping -h127.0.0.1 -P3306 -uroot -proot --silent && break
+            sleep 2
+          done
+
+      - name: PHPUnit (integration)
+        run: composer test:integration
