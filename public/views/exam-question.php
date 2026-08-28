@@ -104,7 +104,10 @@ $cameraRequired = !empty($exam['camera_required']);
                 </div>
 
                 <div class="wpcbtpro-question__prompt">
-                    <?php echo $type->renderer()->renderPrompt($question); ?>
+                    <?php
+                    // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- renderPrompt() runs the content through wp_kses() (see RendersHtmlContent).
+                    echo $type->renderer()->renderPrompt($question);
+                    ?>
                 </div>
 
                 <div class="wpcbtpro-question__answer">

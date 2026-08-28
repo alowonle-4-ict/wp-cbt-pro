@@ -41,13 +41,16 @@ final class ProgrammingQuestionsAdminController
         }
 
         $errors = [];
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['wpcbtpro_programming_nonce'])) {
+        // handleSave() runs check_admin_referer() as its first statement; the reads below only decide whether to dispatch there.
+        // phpcs:disable WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput
+        if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['wpcbtpro_programming_nonce'])) {
             $errors = $this->handleSave();
             if ($errors === []) {
                 return;
             }
             $action = empty($_POST['question_id']) ? 'new' : 'edit';
         }
+        // phpcs:enable WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput
 
         if (in_array($action, ['new', 'edit'], true)) {
             $this->renderForm($action, $errors);
@@ -76,7 +79,8 @@ final class ProgrammingQuestionsAdminController
         $question = null;
 
         if ($action === 'edit') {
-            $id = (int) ($_GET['id'] ?? $_POST['question_id'] ?? 0);
+            // phpcs:ignore WordPress.Security.NonceVerification -- read-only: resolves which record to display, not a state change.
+            $id = isset($_GET['id']) ? absint($_GET['id']) : (isset($_POST['question_id']) ? absint($_POST['question_id']) : 0);
             $question = $this->questions->find($id);
             if ($question === null || $question['type'] !== 'programming') {
                 wp_die(esc_html__('Programming question not found.', 'wp-cbt-pro'));
@@ -93,9 +97,11 @@ final class ProgrammingQuestionsAdminController
     {
         check_admin_referer('wpcbtpro_save_programming', 'wpcbtpro_programming_nonce');
 
-        $id = (int) ($_POST['question_id'] ?? 0);
+        // phpcs:disable WordPress.Security.ValidatedSanitizedInput -- (int)/(float) casts below are the sanitization.
+        $id = isset($_POST['question_id']) ? absint($_POST['question_id']) : 0;
         $content = wp_kses_post(wp_unslash($_POST['content'] ?? ''));
         $marks = (float) ($_POST['marks'] ?? 0);
+        // phpcs:enable WordPress.Security.ValidatedSanitizedInput
 
         $errors = [];
         if (trim(wp_strip_all_tags($content)) === '') {
@@ -155,7 +161,8 @@ final class ProgrammingQuestionsAdminController
 
     private function handleDelete(): void
     {
-        $id = (int) ($_GET['id'] ?? 0);
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- the id is only used to build the nonce action string; check_admin_referer() below rejects any tampering.
+        $id = isset($_GET['id']) ? absint($_GET['id']) : 0;
         check_admin_referer('wpcbtpro_delete_programming_' . $id);
 
         $this->questions->delete($id);

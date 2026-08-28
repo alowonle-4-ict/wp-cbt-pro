@@ -40,7 +40,8 @@ final class InvigilatorDashboardController
             wp_die(esc_html__('You do not have permission to view exam monitoring.', 'wp-cbt-pro'));
         }
 
-        $attemptId = (int) ($_GET['attempt_id'] ?? 0);
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only: which attempt's monitoring detail to display, not a state change.
+        $attemptId = isset($_GET['attempt_id']) ? absint($_GET['attempt_id']) : 0;
         if ($attemptId > 0) {
             $this->renderDetail($attemptId);
             return;

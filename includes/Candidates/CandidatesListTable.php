@@ -45,7 +45,7 @@ final class CandidatesListTable extends \WP_List_Table
     public function prepare_items(): void
     {
         $search = isset($_REQUEST['s']) ? sanitize_text_field(wp_unslash($_REQUEST['s'])) : '';
-        $paged = max(1, (int) ($_REQUEST['paged'] ?? 1));
+        $paged = max(1, isset($_REQUEST['paged']) ? absint($_REQUEST['paged']) : 1);
         $orderby = sanitize_key($_REQUEST['orderby'] ?? 'created_at');
         $order = sanitize_key($_REQUEST['order'] ?? 'desc');
 

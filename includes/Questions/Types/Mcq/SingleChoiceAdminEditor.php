@@ -34,7 +34,11 @@ final class SingleChoiceAdminEditor implements AdminEditorView
                             aria-label="<?php esc_attr_e('Correct answer', 'wp-cbt-pro'); ?>">
                         <input type="text" name="options_label[]" class="regular-text"
                             value="<?php echo esc_attr($options[$i]['label'] ?? ''); ?>"
-                            placeholder="<?php echo esc_attr(sprintf(__('Option %d', 'wp-cbt-pro'), $i + 1)); ?>">
+                            placeholder="<?php echo esc_attr(sprintf(
+                                /* translators: %d: option number */
+                                __('Option %d', 'wp-cbt-pro'),
+                                $i + 1
+                            )); ?>">
                     </p>
                 <?php endfor; ?>
                 <p class="description"><?php esc_html_e('Leave a row blank to omit it. Mark the radio button next to the correct option.', 'wp-cbt-pro'); ?></p>

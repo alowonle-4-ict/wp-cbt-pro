@@ -11,8 +11,9 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-$field = static fn (string $key, string $default = ''): string =>
-    esc_attr($candidate[$key] ?? $_POST[$key] ?? $default);
+// Redisplay-only fallback, reached only after handleSave() already ran check_admin_referer(); esc_attr() below covers output safety.
+// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+$field = static fn (string $key, string $default = ''): string => esc_attr(wp_unslash($candidate[$key] ?? $_POST[$key] ?? $default));
 
 $listUrl = add_query_arg(['page' => 'wpcbtpro-candidates'], admin_url('admin.php'));
 $photoId = (int) ($candidate['photo_attachment_id'] ?? 0);
@@ -65,19 +66,19 @@ $photoId = (int) ($candidate['photo_attachment_id'] ?? 0);
 
             <tr>
                 <th><label for="first_name"><?php esc_html_e('First name', 'wp-cbt-pro'); ?> <span class="required">*</span></label></th>
-                <td><input type="text" id="first_name" name="first_name" class="regular-text" value="<?php echo $field('first_name'); ?>" required></td>
+                <td><input type="text" id="first_name" name="first_name" class="regular-text" value="<?php echo $field('first_name'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $field() escapes via esc_attr(), see top of file ?>" required></td>
             </tr>
             <tr>
                 <th><label for="last_name"><?php esc_html_e('Last name', 'wp-cbt-pro'); ?> <span class="required">*</span></label></th>
-                <td><input type="text" id="last_name" name="last_name" class="regular-text" value="<?php echo $field('last_name'); ?>" required></td>
+                <td><input type="text" id="last_name" name="last_name" class="regular-text" value="<?php echo $field('last_name'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $field() escapes via esc_attr(), see top of file ?>" required></td>
             </tr>
             <tr>
                 <th><label for="email"><?php esc_html_e('Email', 'wp-cbt-pro'); ?></label></th>
-                <td><input type="email" id="email" name="email" class="regular-text" value="<?php echo $field('email'); ?>"></td>
+                <td><input type="email" id="email" name="email" class="regular-text" value="<?php echo $field('email'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $field() escapes via esc_attr(), see top of file ?>"></td>
             </tr>
             <tr>
                 <th><label for="phone"><?php esc_html_e('Phone', 'wp-cbt-pro'); ?></label></th>
-                <td><input type="text" id="phone" name="phone" class="regular-text" value="<?php echo $field('phone'); ?>"></td>
+                <td><input type="text" id="phone" name="phone" class="regular-text" value="<?php echo $field('phone'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $field() escapes via esc_attr(), see top of file ?>"></td>
             </tr>
             <tr>
                 <th><label for="wp_user_id"><?php esc_html_e('Linked WordPress account', 'wp-cbt-pro'); ?></label></th>
@@ -96,15 +97,15 @@ $photoId = (int) ($candidate['photo_attachment_id'] ?? 0);
             </tr>
             <tr>
                 <th><label for="department"><?php esc_html_e('Department', 'wp-cbt-pro'); ?></label></th>
-                <td><input type="text" id="department" name="department" class="regular-text" value="<?php echo $field('department'); ?>"></td>
+                <td><input type="text" id="department" name="department" class="regular-text" value="<?php echo $field('department'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $field() escapes via esc_attr(), see top of file ?>"></td>
             </tr>
             <tr>
                 <th><label for="class"><?php esc_html_e('Class', 'wp-cbt-pro'); ?></label></th>
-                <td><input type="text" id="class" name="class" class="regular-text" value="<?php echo $field('class'); ?>"></td>
+                <td><input type="text" id="class" name="class" class="regular-text" value="<?php echo $field('class'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $field() escapes via esc_attr(), see top of file ?>"></td>
             </tr>
             <tr>
                 <th><label for="registration_number"><?php esc_html_e('Registration number', 'wp-cbt-pro'); ?></label></th>
-                <td><input type="text" id="registration_number" name="registration_number" class="regular-text" value="<?php echo $field('registration_number'); ?>"></td>
+                <td><input type="text" id="registration_number" name="registration_number" class="regular-text" value="<?php echo $field('registration_number'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $field() escapes via esc_attr(), see top of file ?>"></td>
             </tr>
             <?php if ($action === 'edit'): ?>
             <tr>

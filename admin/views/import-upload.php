@@ -7,13 +7,14 @@ if (!defined('ABSPATH')) {
 <div class="wrap wpcbtpro-wrap">
     <h1><?php esc_html_e('Import Questions from Word', 'wp-cbt-pro'); ?></h1>
 
+    <?php // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only success banner, not a state change; both values are cast to int below. ?>
     <?php if (isset($_GET['imported'])): ?>
         <div class="notice notice-success is-dismissible">
             <p><?php echo esc_html(sprintf(
                 /* translators: 1: number imported, 2: number selected */
                 __('Imported %1$d of %2$d selected questions into the question bank.', 'wp-cbt-pro'),
-                (int) $_GET['imported'],
-                (int) ($_GET['total'] ?? 0)
+                absint($_GET['imported']),
+                isset($_GET['total']) ? absint($_GET['total']) : 0
             )); ?></p>
         </div>
     <?php endif; ?>

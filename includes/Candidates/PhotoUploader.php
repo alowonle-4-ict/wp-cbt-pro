@@ -19,6 +19,7 @@ final class PhotoUploader
      */
     public function handleUpload(string $fieldName): int|\WP_Error
     {
+        // phpcs:ignore WordPress.Security.NonceVerification.Missing -- only ever called from CandidatesAdminController::handleSave(), which already ran check_admin_referer().
         if (empty($_FILES[$fieldName]['name'])) {
             return new \WP_Error('no_file', __('No photo was uploaded.', 'wp-cbt-pro'));
         }

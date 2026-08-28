@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<ruleset name="WP CBT Pro">
+    <description>
+        WordPress-specific security and best-practice checks for a plugin
+        that otherwise follows its own PSR-4/camelCase style rather than
+        WordPress-Core formatting conventions (tabs, snake_case, brace
+        placement). Only the WPCS sniffs that catch real WordPress bugs —
+        unescaped output, missing nonce checks, unsanitized input, missing
+        text domains — are enabled; formatting/naming sniffs (and the SQL
+        prepare sniffs, see below) are intentionally left out.
+    </description>
+
+    <file>includes</file>
+    <file>admin</file>
+    <file>public</file>
+    <file>wp-cbt-pro.php</file>
+    <file>uninstall.php</file>
+
+    <arg name="extensions" value="php"/>
+    <arg value="sp"/>
+
+    <config name="minimum_supported_wp_version" value="6.0"/>
+
+    <rule ref="WordPress.Security.EscapeOutput">
+        <!--
+            Fires on every translated string passed to a RuntimeException or
+            WP_Error — this codebase's standard pattern for surfacing errors
+            through REST/WP_Error, not HTML output — so it would ask for
+            HTML-escaping strings that end up in JSON error responses, which
+            is wrong. Genuine unescaped-output issues (echoing raw values in
+            admin/public view templates) are still caught by this sniff.
+        -->
+        <exclude name="WordPress.Security.EscapeOutput.ExceptionNotEscaped"/>
+    </rule>
+    <rule ref="WordPress.Security.NonceVerification"/>
+    <rule ref="WordPress.Security.ValidatedSanitizedInput"/>
+    <rule ref="WordPress.Security.SafeRedirect"/>
+    <rule ref="WordPress.Security.PluginMenuSlug"/>
+    <rule ref="WordPress.WP.AlternativeFunctions"/>
+    <rule ref="WordPress.WP.EnqueuedResources"/>
+
+    <!--
+        WordPress.DB.PreparedSQL/PreparedSQLPlaceholders are deliberately
+        left out: every repository builds its query with a dynamic-but-
+        hardcoded table name (e.g. `{$this->table()}`, never from user
+        input) and does pass the finished string through $wpdb->prepare(),
+        but the sniff can't statically verify that and flags the pattern
+        on essentially every repository method — all noise, no signal, on
+        this codebase.
+    -->
+    <rule ref="WordPress.WP.I18n">
+        <properties>
+            <property name="text_domain" type="array">
+                <element value="wp-cbt-pro"/>
+            </property>
+        </properties>
+    </rule>
+</ruleset>

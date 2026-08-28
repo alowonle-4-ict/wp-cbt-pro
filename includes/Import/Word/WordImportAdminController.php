@@ -32,15 +32,18 @@ final class WordImportAdminController
             wp_die(esc_html__('You do not have permission to manage questions.', 'wp-cbt-pro'));
         }
 
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['wpcbtpro_import_upload_nonce'])) {
+        // handleUpload()/handleConfirm() each run check_admin_referer() as their first statement; the reads below only decide whether to dispatch there.
+        // phpcs:disable WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput
+        if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['wpcbtpro_import_upload_nonce'])) {
             $this->handleUpload();
             return;
         }
 
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['wpcbtpro_import_confirm_nonce'])) {
+        if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['wpcbtpro_import_confirm_nonce'])) {
             $this->handleConfirm();
             return;
         }
+        // phpcs:enable WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput
 
         $session = sanitize_key($_GET['session'] ?? '');
         $rows = $session !== '' ? get_transient(self::TRANSIENT_PREFIX . $session) : false;
@@ -79,7 +82,8 @@ final class WordImportAdminController
             wp_die(esc_html__('Please upload a .docx file.', 'wp-cbt-pro'));
         }
 
-        $tmpPath = $_FILES['wpcbtpro_docx']['tmp_name'];
+        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- is_uploaded_file() below is the correct validation for a tmp_name, not sanitize_text_field().
+        $tmpPath = $_FILES['wpcbtpro_docx']['tmp_name'] ?? '';
         if (!is_uploaded_file($tmpPath)) {
             wp_die(esc_html__('The upload could not be verified.', 'wp-cbt-pro'));
         }

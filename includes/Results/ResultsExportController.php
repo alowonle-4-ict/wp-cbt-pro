@@ -36,7 +36,8 @@ final class ResultsExportController
             wp_die(esc_html__('You do not have permission to export results.', 'wp-cbt-pro'));
         }
 
-        $examId = (int) ($_GET['exam_id'] ?? 0);
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- exam_id is only used to build the nonce action string; check_admin_referer() below rejects any tampering.
+        $examId = isset($_GET['exam_id']) ? absint($_GET['exam_id']) : 0;
         check_admin_referer('wpcbtpro_export_results_csv_' . $examId);
 
         $exam = $this->exams->find($examId);
@@ -91,7 +92,7 @@ final class ResultsExportController
             ]);
         }
 
-        fclose($out);
+        fclose($out); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- streaming to php://output, which WP_Filesystem cannot address.
         exit;
     }
 }

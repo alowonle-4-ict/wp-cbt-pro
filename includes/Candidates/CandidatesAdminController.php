@@ -33,13 +33,16 @@ final class CandidatesAdminController
         }
 
         $errors = [];
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['wpcbtpro_candidate_nonce'])) {
+        // handleSave() runs check_admin_referer() as its first statement; the reads below only decide whether to dispatch there.
+        // phpcs:disable WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput
+        if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['wpcbtpro_candidate_nonce'])) {
             $errors = $this->handleSave();
             if ($errors === []) {
                 return;
             }
             $action = empty($_POST['candidate_id']) ? 'new' : 'edit';
         }
+        // phpcs:enable WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput
 
         if (in_array($action, ['new', 'edit'], true)) {
             $this->renderForm($action, $errors);
@@ -68,7 +71,8 @@ final class CandidatesAdminController
     {
         $candidate = null;
         if ($action === 'edit') {
-            $id = (int) ($_GET['id'] ?? $_POST['candidate_id'] ?? 0);
+            // phpcs:ignore WordPress.Security.NonceVerification -- read-only: resolves which record to display, not a state change.
+            $id = isset($_GET['id']) ? absint($_GET['id']) : (isset($_POST['candidate_id']) ? absint($_POST['candidate_id']) : 0);
             $candidate = $this->repository->find($id);
             if ($candidate === null) {
                 wp_die(esc_html__('Candidate not found.', 'wp-cbt-pro'));
@@ -87,7 +91,7 @@ final class CandidatesAdminController
     {
         check_admin_referer('wpcbtpro_save_candidate', 'wpcbtpro_candidate_nonce');
 
-        $id = (int) ($_POST['candidate_id'] ?? 0);
+        $id = isset($_POST['candidate_id']) ? absint($_POST['candidate_id']) : 0;
 
         // Institution is fixed at creation and never changed via this form —
         // reassigning a candidate across tenants is a deliberate, separate
@@ -97,21 +101,21 @@ final class CandidatesAdminController
             $institutionId = $existing !== null ? (int) $existing['institution_id'] : null;
         } else {
             $institutionId = current_user_can(Capabilities::MANAGE_CBT) && !empty($_POST['institution_id'])
-                ? (int) $_POST['institution_id']
+                ? absint($_POST['institution_id'])
                 : $this->institutionContext->currentId();
         }
 
         $input = [
             'institution_id' => $institutionId,
-            'first_name' => wp_unslash($_POST['first_name'] ?? ''),
-            'last_name' => wp_unslash($_POST['last_name'] ?? ''),
-            'email' => wp_unslash($_POST['email'] ?? ''),
-            'phone' => wp_unslash($_POST['phone'] ?? ''),
-            'department' => wp_unslash($_POST['department'] ?? ''),
-            'class' => wp_unslash($_POST['class'] ?? ''),
-            'registration_number' => wp_unslash($_POST['registration_number'] ?? ''),
+            'first_name' => sanitize_text_field(wp_unslash($_POST['first_name'] ?? '')),
+            'last_name' => sanitize_text_field(wp_unslash($_POST['last_name'] ?? '')),
+            'email' => sanitize_email(wp_unslash($_POST['email'] ?? '')),
+            'phone' => sanitize_text_field(wp_unslash($_POST['phone'] ?? '')),
+            'department' => sanitize_text_field(wp_unslash($_POST['department'] ?? '')),
+            'class' => sanitize_text_field(wp_unslash($_POST['class'] ?? '')),
+            'registration_number' => sanitize_text_field(wp_unslash($_POST['registration_number'] ?? '')),
             'status' => sanitize_key($_POST['status'] ?? 'active'),
-            'wp_user_id' => (int) ($_POST['wp_user_id'] ?? 0),
+            'wp_user_id' => isset($_POST['wp_user_id']) ? absint($_POST['wp_user_id']) : 0,
         ];
 
         $errors = $this->service->validate($input);
@@ -141,7 +145,8 @@ final class CandidatesAdminController
 
     private function handleDelete(): void
     {
-        $id = (int) ($_GET['id'] ?? 0);
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- the id is only used to build the nonce action string; check_admin_referer() below rejects any tampering.
+        $id = isset($_GET['id']) ? absint($_GET['id']) : 0;
         check_admin_referer('wpcbtpro_delete_candidate_' . $id);
 
         $this->service->delete($id);

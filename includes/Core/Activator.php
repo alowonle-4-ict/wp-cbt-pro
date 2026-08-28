@@ -16,7 +16,7 @@ final class Activator
             deactivate_plugins(plugin_basename(WPCBTPRO_FILE));
             wp_die(esc_html__(
                 'WP CBT Pro requires PHP 8.1 or higher.',
-                WPCBTPRO_TEXT_DOMAIN
+                'wp-cbt-pro'
             ));
         }
 

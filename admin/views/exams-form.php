@@ -13,11 +13,12 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-$field = static fn (string $key, string $default = ''): string =>
-    esc_attr((string) ($exam[$key] ?? $_POST[$key] ?? $default));
+// Redisplay-only fallbacks, reached only after handleSave() already ran check_admin_referer(); esc_attr() covers output safety, and $checkedField() only ever feeds a boolean into checked().
+// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+$field = static fn (string $key, string $default = ''): string => esc_attr(wp_unslash((string) ($exam[$key] ?? $_POST[$key] ?? $default)));
 
-$checkedField = static fn (string $key): bool =>
-    !empty($exam[$key] ?? ($_POST[$key] ?? false));
+// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+$checkedField = static fn (string $key): bool => !empty($exam[$key] ?? (wp_unslash($_POST[$key] ?? false)));
 
 $toLocalDatetime = static function (?string $mysqlDatetime): string {
     if (empty($mysqlDatetime)) {
@@ -67,11 +68,11 @@ $listUrl = add_query_arg(['page' => 'wpcbtpro-exams'], admin_url('admin.php'));
             <?php endif; ?>
             <tr>
                 <th><label for="name"><?php esc_html_e('Exam name', 'wp-cbt-pro'); ?> <span class="required">*</span></label></th>
-                <td><input type="text" id="name" name="name" class="regular-text" value="<?php echo $field('name'); ?>" required></td>
+                <td><input type="text" id="name" name="name" class="regular-text" value="<?php echo $field('name'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $field() escapes via esc_attr(), see top of file ?>" required></td>
             </tr>
             <tr>
                 <th><label for="subject"><?php esc_html_e('Subject', 'wp-cbt-pro'); ?></label></th>
-                <td><input type="text" id="subject" name="subject" class="regular-text" value="<?php echo $field('subject'); ?>"></td>
+                <td><input type="text" id="subject" name="subject" class="regular-text" value="<?php echo $field('subject'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $field() escapes via esc_attr(), see top of file ?>"></td>
             </tr>
             <tr>
                 <th><label for="description"><?php esc_html_e('Description', 'wp-cbt-pro'); ?></label></th>
@@ -99,7 +100,7 @@ $listUrl = add_query_arg(['page' => 'wpcbtpro-exams'], admin_url('admin.php'));
         <table class="form-table" role="presentation">
             <tr>
                 <th><label for="duration_minutes"><?php esc_html_e('Duration (minutes)', 'wp-cbt-pro'); ?> <span class="required">*</span></label></th>
-                <td><input type="number" min="1" id="duration_minutes" name="duration_minutes" value="<?php echo $field('duration_minutes', '60'); ?>" required></td>
+                <td><input type="number" min="1" id="duration_minutes" name="duration_minutes" value="<?php echo $field('duration_minutes', '60'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $field() escapes via esc_attr(), see top of file ?>" required></td>
             </tr>
             <tr>
                 <th><label for="start_at"><?php esc_html_e('Start', 'wp-cbt-pro'); ?></label></th>
@@ -111,11 +112,11 @@ $listUrl = add_query_arg(['page' => 'wpcbtpro-exams'], admin_url('admin.php'));
             </tr>
             <tr>
                 <th><label for="attempt_limit"><?php esc_html_e('Attempt limit', 'wp-cbt-pro'); ?></label></th>
-                <td><input type="number" min="1" id="attempt_limit" name="attempt_limit" value="<?php echo $field('attempt_limit', '1'); ?>"></td>
+                <td><input type="number" min="1" id="attempt_limit" name="attempt_limit" value="<?php echo $field('attempt_limit', '1'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $field() escapes via esc_attr(), see top of file ?>"></td>
             </tr>
             <tr>
                 <th><label for="pass_mark"><?php esc_html_e('Pass mark (%)', 'wp-cbt-pro'); ?></label></th>
-                <td><input type="number" min="0" max="100" step="0.01" id="pass_mark" name="pass_mark" value="<?php echo $field('pass_mark'); ?>"></td>
+                <td><input type="number" min="0" max="100" step="0.01" id="pass_mark" name="pass_mark" value="<?php echo $field('pass_mark'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $field() escapes via esc_attr(), see top of file ?>"></td>
             </tr>
         </table>
 
@@ -158,7 +159,7 @@ $listUrl = add_query_arg(['page' => 'wpcbtpro-exams'], admin_url('admin.php'));
             <tr>
                 <th><label for="snapshot_interval_seconds"><?php esc_html_e('Snapshot interval (seconds)', 'wp-cbt-pro'); ?></label></th>
                 <td>
-                    <input type="number" min="0" id="snapshot_interval_seconds" name="snapshot_interval_seconds" value="<?php echo $field('snapshot_interval_seconds'); ?>">
+                    <input type="number" min="0" id="snapshot_interval_seconds" name="snapshot_interval_seconds" value="<?php echo $field('snapshot_interval_seconds'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $field() escapes via esc_attr(), see top of file ?>">
                     <p class="description"><?php esc_html_e('Leave blank to disable periodic snapshots.', 'wp-cbt-pro'); ?></p>
                 </td>
             </tr>
@@ -227,10 +228,10 @@ $listUrl = add_query_arg(['page' => 'wpcbtpro-exams'], admin_url('admin.php'));
             $pool = $key !== '' ? $pools[$key] : ['pool_key' => '', 'name' => '', 'draw_count' => 1];
         ?>
             <p class="wpcbtpro-pool-row">
-                <input type="text" name="pools[<?php echo $i; ?>][key]" placeholder="<?php esc_attr_e('pool key (e.g. algebra)', 'wp-cbt-pro'); ?>" value="<?php echo esc_attr($pool['pool_key']); ?>" class="regular-text">
-                <input type="text" name="pools[<?php echo $i; ?>][name]" placeholder="<?php esc_attr_e('Display name', 'wp-cbt-pro'); ?>" value="<?php echo esc_attr($pool['name']); ?>" class="regular-text">
+                <input type="text" name="pools[<?php echo (int) $i; ?>][key]" placeholder="<?php esc_attr_e('pool key (e.g. algebra)', 'wp-cbt-pro'); ?>" value="<?php echo esc_attr($pool['pool_key']); ?>" class="regular-text">
+                <input type="text" name="pools[<?php echo (int) $i; ?>][name]" placeholder="<?php esc_attr_e('Display name', 'wp-cbt-pro'); ?>" value="<?php echo esc_attr($pool['name']); ?>" class="regular-text">
                 <?php esc_html_e('Draw', 'wp-cbt-pro'); ?>
-                <input type="number" min="1" name="pools[<?php echo $i; ?>][draw_count]" value="<?php echo esc_attr((string) $pool['draw_count']); ?>" class="small-text">
+                <input type="number" min="1" name="pools[<?php echo (int) $i; ?>][draw_count]" value="<?php echo esc_attr((string) $pool['draw_count']); ?>" class="small-text">
             </p>
         <?php endfor; ?>
 

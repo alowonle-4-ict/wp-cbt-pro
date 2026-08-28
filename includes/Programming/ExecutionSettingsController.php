@@ -20,14 +20,17 @@ final class ExecutionSettingsController
         }
 
         $saved = false;
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['wpcbtpro_execution_settings_nonce'])) {
+        // phpcs:ignore WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput -- check_admin_referer() below verifies before anything is read.
+        if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['wpcbtpro_execution_settings_nonce'])) {
             check_admin_referer('wpcbtpro_save_execution_settings', 'wpcbtpro_execution_settings_nonce');
 
             $settings = get_option('wpcbtpro_settings', []);
             $settings['execution_service_url'] = esc_url_raw(wp_unslash($_POST['execution_service_url'] ?? ''));
             $settings['execution_service_api_key'] = sanitize_text_field(wp_unslash($_POST['execution_service_api_key'] ?? ''));
-            $settings['camera_disconnect_policy'] = in_array($_POST['camera_disconnect_policy'] ?? '', ['log', 'pause', 'terminate'], true)
-                ? $_POST['camera_disconnect_policy']
+            // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- validated against an explicit allowlist below, which is stronger than a generic sanitizer.
+            $postedPolicy = sanitize_key(wp_unslash($_POST['camera_disconnect_policy'] ?? ''));
+            $settings['camera_disconnect_policy'] = in_array($postedPolicy, ['log', 'pause', 'terminate'], true)
+                ? $postedPolicy
                 : ($settings['camera_disconnect_policy'] ?? 'pause');
             $settings['snapshot_retention'] = sanitize_key($_POST['snapshot_retention'] ?? ($settings['snapshot_retention'] ?? '30_days'));
 

@@ -73,7 +73,7 @@ final class ProgrammingAdminEditor implements AdminEditorView
                                 <td><textarea name="test_input[]" rows="2"><?php echo esc_textarea($tc['input'] ?? ''); ?></textarea></td>
                                 <td><textarea name="test_output[]" rows="2"><?php echo esc_textarea($tc['expected_output'] ?? ''); ?></textarea></td>
                                 <td><input type="number" step="0.1" min="0" name="test_weight[]" value="<?php echo esc_attr((string) ($tc['weight'] ?? 1)); ?>" class="small-text"></td>
-                                <td><input type="checkbox" name="test_hidden[<?php echo $i; ?>]" value="1" <?php checked(!empty($tc['is_hidden'])); ?>></td>
+                                <td><input type="checkbox" name="test_hidden[<?php echo (int) $i; ?>]" value="1" <?php checked(!empty($tc['is_hidden'])); ?>></td>
                             </tr>
                         <?php endfor; ?>
                     </tbody>

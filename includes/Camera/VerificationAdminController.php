@@ -35,7 +35,9 @@ final class VerificationAdminController
             wp_die(esc_html__('You do not have permission to review identity verifications.', 'wp-cbt-pro'));
         }
 
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['wpcbtpro_review_nonce'])) {
+        // handleReview() runs check_admin_referer() as its first statement; this only decides whether to dispatch there.
+        // phpcs:ignore WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput
+        if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['wpcbtpro_review_nonce'])) {
             $this->handleReview();
             return;
         }
@@ -76,7 +78,8 @@ final class VerificationAdminController
 
     private function handleReview(): void
     {
-        $recordId = (int) ($_POST['record_id'] ?? 0);
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- record_id is only used to build the nonce action string; check_admin_referer() below rejects any tampering.
+        $recordId = isset($_POST['record_id']) ? absint($_POST['record_id']) : 0;
         check_admin_referer('wpcbtpro_review_verification_' . $recordId, 'wpcbtpro_review_nonce');
 
         $decision = sanitize_key($_POST['decision'] ?? '');

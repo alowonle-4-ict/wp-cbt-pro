@@ -81,7 +81,8 @@ final class ExamRuntimeController
             check_admin_referer('wpcbtpro_start_exam_' . $examId, 'wpcbtpro_start_nonce');
 
             $requiresConsent = !empty($exam['camera_required']) || !empty($exam['identity_verification']);
-            if ($requiresConsent && ($_POST['consent_given'] ?? '0') !== '1') {
+            // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- check_admin_referer() above already verified this request; comparing a fixed '1' literal needs no further sanitization.
+            if ($requiresConsent && (wp_unslash($_POST['consent_given'] ?? '0')) !== '1') {
                 $startError = __('You must complete the system check and accept the monitoring policy to continue.', 'wp-cbt-pro');
             } else {
                 try {
@@ -127,14 +128,17 @@ final class ExamRuntimeController
         }
 
         $total = count($this->attemptService->resolvedQuestionIds($exam, $attempt));
-        $currentIndex = max(0, (int) ($_GET['q'] ?? 0));
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only: which question index to display, not a state change.
+        $currentIndex = max(0, isset($_GET['q']) ? absint($_GET['q']) : 0);
         $answerError = null;
 
         if ($this->isPostback('wpcbtpro_answer_nonce')) {
             check_admin_referer('wpcbtpro_save_answer_' . $attempt['id'], 'wpcbtpro_answer_nonce');
 
-            $questionId = (int) ($_POST['question_id'] ?? 0);
-            $nav = (string) ($_POST['wpcbtpro_nav'] ?? '');
+            // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- check_admin_referer() above already verified this request.
+            $questionId = isset($_POST['question_id']) ? absint($_POST['question_id']) : 0;
+            $nav = sanitize_text_field(wp_unslash($_POST['wpcbtpro_nav'] ?? ''));
+            // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- shape varies per question type (an option id, a DSA JSON state, raw source code); type->validator() below does the type-appropriate validation, so a generic sanitizer here would corrupt legitimate answers (e.g. programming source).
             $rawAnswer = $nav === 'clear' ? '' : wp_unslash($_POST['wpcbtpro_answer'] ?? '');
             $marked = !empty($_POST['wpcbtpro_marked_for_review']);
 
@@ -151,7 +155,8 @@ final class ExamRuntimeController
 
     private function isPostback(string $nonceField): bool
     {
-        return $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST[$nonceField]);
+        // phpcs:ignore WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput -- every caller runs check_admin_referer() immediately after; this only decides whether to.
+        return ($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST[$nonceField]);
     }
 
     private function resolveNavTarget(string $nav, int $current, int $total): int
@@ -173,6 +178,7 @@ final class ExamRuntimeController
 
     private function renderLoginPrompt(): void
     {
+        // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- the result is passed through esc_url() below before output; this is the standard wp_login_url() redirect-back pattern.
         $redirect = home_url(add_query_arg([], wp_unslash($_SERVER['REQUEST_URI'] ?? '')));
         $message = sprintf(
             /* translators: %s: login URL */

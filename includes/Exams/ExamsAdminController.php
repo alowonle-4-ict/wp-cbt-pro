@@ -34,13 +34,16 @@ final class ExamsAdminController
         }
 
         $errors = [];
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['wpcbtpro_exam_nonce'])) {
+        // handleSave() runs check_admin_referer() as its first statement; the reads below only decide whether to dispatch there.
+        // phpcs:disable WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput
+        if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['wpcbtpro_exam_nonce'])) {
             $errors = $this->handleSave();
             if ($errors === []) {
                 return;
             }
             $action = empty($_POST['exam_id']) ? 'new' : 'edit';
         }
+        // phpcs:enable WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput
 
         if (in_array($action, ['new', 'edit'], true)) {
             $this->renderForm($action, $errors);
@@ -72,7 +75,8 @@ final class ExamsAdminController
         $pools = [];
 
         if ($action === 'edit') {
-            $id = (int) ($_GET['id'] ?? $_POST['exam_id'] ?? 0);
+            // phpcs:ignore WordPress.Security.NonceVerification -- read-only: resolves which record to display, not a state change.
+            $id = isset($_GET['id']) ? absint($_GET['id']) : (isset($_POST['exam_id']) ? absint($_POST['exam_id']) : 0);
             $exam = $this->repository->find($id);
             if ($exam === null) {
                 wp_die(esc_html__('Exam not found.', 'wp-cbt-pro'));
@@ -102,28 +106,32 @@ final class ExamsAdminController
     {
         check_admin_referer('wpcbtpro_save_exam', 'wpcbtpro_exam_nonce');
 
-        $id = (int) ($_POST['exam_id'] ?? 0);
+        $id = isset($_POST['exam_id']) ? absint($_POST['exam_id']) : 0;
 
         if ($id !== 0) {
             $existing = $this->repository->find($id);
             $institutionId = $existing !== null ? (int) $existing['institution_id'] : null;
         } else {
             $institutionId = current_user_can(Capabilities::MANAGE_CBT) && !empty($_POST['institution_id'])
-                ? (int) $_POST['institution_id']
+                ? absint($_POST['institution_id'])
                 : $this->institutionContext->currentId();
         }
 
+        // duration_minutes, attempt_limit, pass_mark, the *_required/*_marking/randomize_* flags, and snapshot_interval_seconds
+        // are read raw here but ExamService::sanitize() (called from validate()/create()/update()) casts every one of them
+        // to (int)/(float)/1-or-0 before anything reaches the database, so no further sanitization belongs at this read site.
+        // phpcs:disable WordPress.Security.ValidatedSanitizedInput
         $input = [
             'institution_id' => $institutionId,
-            'name' => wp_unslash($_POST['name'] ?? ''),
-            'description' => wp_unslash($_POST['description'] ?? ''),
-            'instructions' => wp_unslash($_POST['instructions'] ?? ''),
-            'subject' => wp_unslash($_POST['subject'] ?? ''),
+            'name' => sanitize_text_field(wp_unslash($_POST['name'] ?? '')),
+            'description' => sanitize_textarea_field(wp_unslash($_POST['description'] ?? '')),
+            'instructions' => sanitize_textarea_field(wp_unslash($_POST['instructions'] ?? '')),
+            'subject' => sanitize_text_field(wp_unslash($_POST['subject'] ?? '')),
             'duration_minutes' => $_POST['duration_minutes'] ?? 0,
-            'start_at' => wp_unslash($_POST['start_at'] ?? ''),
-            'end_at' => wp_unslash($_POST['end_at'] ?? ''),
+            'start_at' => sanitize_text_field(wp_unslash($_POST['start_at'] ?? '')),
+            'end_at' => sanitize_text_field(wp_unslash($_POST['end_at'] ?? '')),
             'attempt_limit' => $_POST['attempt_limit'] ?? 1,
-            'pass_mark' => wp_unslash($_POST['pass_mark'] ?? ''),
+            'pass_mark' => sanitize_text_field(wp_unslash($_POST['pass_mark'] ?? '')),
             'randomize_questions' => $_POST['randomize_questions'] ?? '',
             'randomize_options' => $_POST['randomize_options'] ?? '',
             'negative_marking' => $_POST['negative_marking'] ?? '',
@@ -135,6 +143,7 @@ final class ExamsAdminController
             'result_visibility' => sanitize_key($_POST['result_visibility'] ?? 'immediate'),
             'status' => sanitize_key($_POST['status'] ?? 'draft'),
         ];
+        // phpcs:enable WordPress.Security.ValidatedSanitizedInput
 
         $errors = $this->service->validate($input);
         if ($errors !== []) {
@@ -198,7 +207,8 @@ final class ExamsAdminController
 
     private function handleDelete(): void
     {
-        $id = (int) ($_GET['id'] ?? 0);
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- the id is only used to build the nonce action string; check_admin_referer() below rejects any tampering.
+        $id = isset($_GET['id']) ? absint($_GET['id']) : 0;
         check_admin_referer('wpcbtpro_delete_exam_' . $id);
 
         $this->service->delete($id);
