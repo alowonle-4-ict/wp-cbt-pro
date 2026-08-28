@@ -4,7 +4,7 @@ Tags: exams, cbt, quiz, e-learning, proctoring
 Requires at least: 6.0
 Tested up to: 6.7
 Requires PHP: 8.1
-Stable tag: 0.2.0
+Stable tag: 0.5.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -16,7 +16,7 @@ structures & algorithms engine.
 
 WP CBT Pro is built for institutions running formal, auditable examinations
 — schools, universities, polytechnics, professional bodies, and government
-examiners. See ARCHITECTURE for the full design specification.
+examiners.
 
 Question types, camera/identity verification providers, and code execution
 backends are all pluggable interfaces rather than hard-coded branches.
@@ -32,6 +32,21 @@ HTTPS.
 3. Activate through the "Plugins" screen in WordPress.
 
 == Changelog ==
+
+= 0.5.0 =
+* Candidate management with photo capture and institution scoping.
+* Pluggable question types: multiple choice, programming (external sandboxed
+  execution and grading), and interactive data structures & algorithms.
+* Word/DOCX question import, including OMML-to-MathML conversion for
+  mathematical content.
+* Exam authoring with question randomization, pools, and negative marking.
+* Exam runtime: attempts, answers, timed submission, and delayed/immediate
+  results release.
+* Camera-based proctoring: session tracking, identity verification review,
+  and an invigilator monitoring dashboard.
+* Results export and a GDPR-compliant personal data export/erase pipeline
+  with scheduled retention cleanup.
+* PHPUnit unit test suite for the pure-logic layer.
 
 = 0.2.0 =
 * Phase 2: plugin bootstrap, database schema/migrations, role & capability
