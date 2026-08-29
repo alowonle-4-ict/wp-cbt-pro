@@ -50,6 +50,7 @@ final class AdminMenu
         $this->dsaController->register();
         $this->resultsController->register();
         $this->mcqController->register();
+        $this->invigilatorController->register();
     }
 
     public function addMenuPages(): void

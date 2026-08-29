@@ -290,6 +290,17 @@ final class Schema
                 PRIMARY KEY  (id),
                 KEY object_type (object_type, object_id)
             ) {$charsetCollate};",
+
+            'candidate_exam_overrides' => "CREATE TABLE {$p}candidate_exam_overrides (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                exam_id BIGINT UNSIGNED NOT NULL,
+                candidate_id BIGINT UNSIGNED NOT NULL,
+                extra_minutes INT UNSIGNED NOT NULL DEFAULT 0,
+                extra_attempts SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+                updated_at DATETIME NOT NULL,
+                PRIMARY KEY  (id),
+                UNIQUE KEY exam_candidate (exam_id, candidate_id)
+            ) {$charsetCollate};",
         ];
     }
 }

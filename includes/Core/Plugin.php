@@ -8,6 +8,7 @@ use WPCBTPro\Attempts\AnswerRepository;
 use WPCBTPro\Attempts\AttemptOwnershipGuard;
 use WPCBTPro\Attempts\AttemptRepository;
 use WPCBTPro\Attempts\AttemptService;
+use WPCBTPro\Attempts\CandidateExamOverrideRepository;
 use WPCBTPro\Attempts\AttemptsRestController;
 use WPCBTPro\Attempts\ExamRuntimeController;
 use WPCBTPro\Camera\Base64ImageUploader;
@@ -341,9 +342,12 @@ final class Plugin
                 $c->get(ExamQuestionResolver::class),
                 $c->get(RandomizationService::class),
                 $c->get(QuestionRepository::class),
-                $c->get(QuestionTypeRegistry::class)
+                $c->get(QuestionTypeRegistry::class),
+                $c->get(CandidateExamOverrideRepository::class)
             )
         );
+
+        $this->container->set(CandidateExamOverrideRepository::class, static fn () => new CandidateExamOverrideRepository());
 
         $this->container->set(
             AttemptOwnershipGuard::class,
@@ -429,7 +433,8 @@ final class Plugin
                 $c->get(CandidateRepository::class),
                 $c->get(CameraSessionRepository::class),
                 $c->get(MonitoringEventRepository::class),
-                $c->get(InstitutionContext::class)
+                $c->get(InstitutionContext::class),
+                $c->get(CandidateExamOverrideRepository::class)
             )
         );
 

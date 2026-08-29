@@ -30,6 +30,7 @@ final class AttemptService
         private readonly RandomizationService $randomizer,
         private readonly QuestionRepository $questionRepository,
         private readonly QuestionTypeRegistry $registry,
+        private readonly CandidateExamOverrideRepository $overrides,
     ) {
     }
 
@@ -56,13 +57,16 @@ final class AttemptService
             return $existing;
         }
 
-        if ($this->attempts->countForCandidateExam($examId, $candidateId) >= (int) $exam['attempt_limit']) {
+        $override = $this->overrides->find($examId, $candidateId);
+        $attemptLimit = (int) $exam['attempt_limit'] + $override['extra_attempts'];
+        if ($this->attempts->countForCandidateExam($examId, $candidateId) >= $attemptLimit) {
             throw new \RuntimeException(__('You have used all of your attempts for this exam.', 'wp-cbt-pro'));
         }
 
         $seed = $this->randomizer->generateSeed();
         $serverStart = current_time('mysql');
-        $serverEnd = gmdate('Y-m-d H:i:s', $now + ((int) $exam['duration_minutes'] * MINUTE_IN_SECONDS));
+        $durationMinutes = (int) $exam['duration_minutes'] + $override['extra_minutes'];
+        $serverEnd = gmdate('Y-m-d H:i:s', $now + ($durationMinutes * MINUTE_IN_SECONDS));
 
         $id = $this->attempts->insert([
             'exam_id' => $examId,
