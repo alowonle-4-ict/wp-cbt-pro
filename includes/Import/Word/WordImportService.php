@@ -20,6 +20,16 @@ final class WordImportService
         'SINGLE_CHOICE' => 'mcq_single',
         'YES_NO' => 'true_false',
         'TRUEFALSE' => 'true_false',
+        // The bundled question-template.docx documents this marker for a DSA
+        // question's Word markup even though DsaType::importHandler()
+        // returns null (DSA questions can't be created via import — they're
+        // built in wp-admin). Without this alias, "DSA_SIMULATION" doesn't
+        // resolve to the registered 'dsa' type id at all, so the preview
+        // shows a misleading "Unknown or unsupported question type" instead
+        // of the accurate "DSA questions cannot be created via Word import
+        // yet" — exactly the confusion a real institution would hit trying
+        // the plugin's own template.
+        'DSA_SIMULATION' => 'dsa',
     ];
 
     public function __construct(private readonly QuestionTypeRegistry $registry)

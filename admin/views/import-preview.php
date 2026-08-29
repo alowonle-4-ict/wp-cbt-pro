@@ -41,7 +41,7 @@ if (!defined('ABSPATH')) {
                             <?php foreach ($block['options'] as $option): ?>
                                 <li>
                                     <?php echo esc_html($option['letter']); ?>.
-                                    <?php echo wp_kses($option['html'], self::mathmlAllowedHtml()); ?>
+                                    <?php echo wp_kses($option['html'], $mathmlAllowedHtml); ?>
                                 </li>
                             <?php endforeach; ?>
                         </ul>
