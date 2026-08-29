@@ -19,12 +19,20 @@ final class AttemptRepository
         return $row ?: null;
     }
 
-    /** The attempt a candidate is currently sitting for this exam, if any. */
-    public function findInProgress(int $examId, int $candidateId): ?array
+    /**
+     * The attempt a candidate is currently sitting for this exam, if any —
+     * 'paused' counts (e.g. an admin-suspended or camera-disconnect-paused
+     * attempt is still theirs to resume, not a slot to start a fresh one
+     * into). This used to check 'in_progress' only, which meant a paused
+     * candidate who reloaded was routed to start a brand-new attempt
+     * instead of resuming, since this returned null and the attempt-limit
+     * check let them straight through if they were still under it.
+     */
+    public function findActive(int $examId, int $candidateId): ?array
     {
         global $wpdb;
         $row = $wpdb->get_row($wpdb->prepare(
-            "SELECT * FROM {$this->table()} WHERE exam_id = %d AND candidate_id = %d AND status = 'in_progress' LIMIT 1",
+            "SELECT * FROM {$this->table()} WHERE exam_id = %d AND candidate_id = %d AND status IN ('in_progress', 'paused') LIMIT 1",
             $examId,
             $candidateId
         ), ARRAY_A);

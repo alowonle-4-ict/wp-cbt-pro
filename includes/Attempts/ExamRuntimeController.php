@@ -97,7 +97,7 @@ final class ExamRuntimeController
             }
         }
 
-        $attempt = $this->attemptRepository->findInProgress($examId, (int) $candidate['id']);
+        $attempt = $this->attemptRepository->findActive($examId, (int) $candidate['id']);
 
         if ($attempt === null) {
             $attemptsUsed = $this->attemptRepository->countForCandidateExam($examId, (int) $candidate['id']);
@@ -105,9 +105,14 @@ final class ExamRuntimeController
             return;
         }
 
-        if ($attempt['status'] === 'in_progress' && $this->attemptService->isExpired($attempt)) {
+        if (in_array($attempt['status'], ['in_progress', 'paused'], true) && $this->attemptService->isExpired($attempt)) {
             $this->attemptService->submitAttempt($exam, $attempt);
             $attempt = $this->attemptRepository->find((int) $attempt['id']);
+        }
+
+        if ($attempt['status'] === 'paused') {
+            $this->renderPaused($exam, $candidate, $attempt);
+            return;
         }
 
         if ($attempt['status'] !== 'in_progress') {
@@ -198,6 +203,11 @@ final class ExamRuntimeController
     private function renderVerify(array $exam, array $candidate, array $attempt): void
     {
         include WPCBTPRO_PATH . 'public/views/exam-verify.php';
+    }
+
+    private function renderPaused(array $exam, array $candidate, array $attempt): void
+    {
+        include WPCBTPRO_PATH . 'public/views/exam-paused.php';
     }
 
     private function renderQuestion(array $exam, array $candidate, array $attempt, int $index, ?string $error): void

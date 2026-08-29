@@ -51,7 +51,7 @@ final class AttemptService
             throw new \RuntimeException(__('This exam is no longer available.', 'wp-cbt-pro'));
         }
 
-        $existing = $this->attempts->findInProgress($examId, $candidateId);
+        $existing = $this->attempts->findActive($examId, $candidateId);
         if ($existing !== null) {
             return $existing;
         }
@@ -181,7 +181,11 @@ final class AttemptService
     {
         $attemptId = (int) $attempt['id'];
 
-        if ($attempt['status'] !== 'in_progress') {
+        // 'paused' is submittable too (the deadline is still absolute while
+        // paused — see pauseAttempt()'s docblock) — otherwise an attempt
+        // that ran out of time while paused would sit forever with no
+        // result row, since nothing else ever calls submitAttempt() on it.
+        if (!in_array($attempt['status'], ['in_progress', 'paused'], true)) {
             return $this->results->findByAttempt($attemptId) ?? [];
         }
 
