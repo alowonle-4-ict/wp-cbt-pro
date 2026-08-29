@@ -16,7 +16,7 @@ use WPCBTPro\Questions\Contracts\QuestionType;
 use WPCBTPro\Questions\Contracts\ScoringStrategy;
 use WPCBTPro\Questions\Contracts\Support\RendersHtmlContent;
 
-class SingleChoiceType implements QuestionType
+class SingleChoiceType implements QuestionType, QuestionRenderer
 {
     use RendersHtmlContent;
 

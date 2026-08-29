@@ -19,7 +19,7 @@ use WPCBTPro\Questions\Contracts\QuestionType;
 use WPCBTPro\Questions\Contracts\ScoringStrategy;
 use WPCBTPro\Questions\Contracts\Support\RendersHtmlContent;
 
-final class ProgrammingType implements QuestionType
+final class ProgrammingType implements QuestionType, QuestionRenderer
 {
     use RendersHtmlContent;
 

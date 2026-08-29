@@ -19,7 +19,7 @@ use WPCBTPro\Questions\Contracts\QuestionType;
 use WPCBTPro\Questions\Contracts\ScoringStrategy;
 use WPCBTPro\Questions\Contracts\Support\RendersHtmlContent;
 
-final class DsaType implements QuestionType
+final class DsaType implements QuestionType, QuestionRenderer
 {
     use RendersHtmlContent;
 
