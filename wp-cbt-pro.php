@@ -26,6 +26,13 @@ define('WPCBTPRO_PATH', plugin_dir_path(__FILE__));
 define('WPCBTPRO_URL', plugin_dir_url(__FILE__));
 define('WPCBTPRO_TEXT_DOMAIN', 'wp-cbt-pro');
 
+// Composer is optional for the plugin's own code (the fallback autoloader
+// below covers it), but the Excel import/export features added in 0.6.0
+// depend on a real third-party library (phpoffice/phpspreadsheet) that has
+// no equivalent fallback — WPCBTPro\Core\SpreadsheetSupport::available()
+// is what those features check before offering themselves, so a site that
+// never ran `composer install` still gets every other feature working,
+// just not those specific ones.
 if (is_readable(WPCBTPRO_PATH . 'vendor/autoload.php')) {
     require_once WPCBTPRO_PATH . 'vendor/autoload.php';
 } else {
