@@ -38,11 +38,17 @@ final class PrivacyEraseService
         }
 
         $candidateId = (int) $candidate['id'];
-        $removedSomething = false;
+        // Reaching here means a real candidate record was found and is about
+        // to have its name/email/phone wiped below — that's real personal
+        // data being removed regardless of whether a photo, verification
+        // snapshot, or monitoring payload also exists to clean up, so
+        // items_removed must already be true, not stay conditionally false
+        // on those extras (a candidate who never used the camera would
+        // otherwise incorrectly report "nothing was removed").
+        $removedSomething = true;
 
         if (!empty($candidate['photo_attachment_id'])) {
             wp_delete_attachment((int) $candidate['photo_attachment_id'], true);
-            $removedSomething = true;
         }
 
         $this->candidates->update($candidateId, [
@@ -60,13 +66,11 @@ final class PrivacyEraseService
             if ($verification !== null && !empty($verification['captured_image_attachment_id'])) {
                 wp_delete_attachment((int) $verification['captured_image_attachment_id'], true);
                 $this->verifications->clearCapturedImage((int) $verification['id']);
-                $removedSomething = true;
             }
 
             foreach ($this->events->allForAttempt($attemptId) as $event) {
                 if ($event['payload'] !== null) {
                     $this->events->redactPayload((int) $event['id']);
-                    $removedSomething = true;
                 }
             }
         }
