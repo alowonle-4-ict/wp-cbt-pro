@@ -3,10 +3,10 @@
  * Plugin Name:       WP CBT Pro
  * Plugin URI:        https://example.com/wp-cbt-pro
  * Description:       Modular computer-based examination platform — candidate management, proctoring, secure code execution, and an interactive DSA engine.
- * Version:           0.2.0
+ * Version:           0.5.0
  * Requires at least: 6.0
  * Requires PHP:      8.1
- * Author:            Your Organization
+ * Author:            Adigun Nurudeen
  * License:           GPL v2 or later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain:       wp-cbt-pro
