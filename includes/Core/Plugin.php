@@ -20,6 +20,7 @@ use WPCBTPro\Camera\VerificationRepository;
 use WPCBTPro\Candidates\CandidateRefGenerator;
 use WPCBTPro\Candidates\CandidateRepository;
 use WPCBTPro\Candidates\CandidateService;
+use WPCBTPro\Candidates\CandidateLoginController;
 use WPCBTPro\Candidates\CandidatesAdminController;
 use WPCBTPro\Candidates\CurrentCandidateResolver;
 use WPCBTPro\Candidates\PhotoUploader;
@@ -149,6 +150,7 @@ final class Plugin
         $this->container->get(QuestionTypeServiceProvider::class)->register();
         $this->container->get(AdminMenu::class)->register();
         $this->container->get(ExamRuntimeController::class)->register();
+        $this->container->get(CandidateLoginController::class)->register();
         $this->container->get(ResultsExportController::class)->register();
     }
 
@@ -319,6 +321,10 @@ final class Plugin
 
         $this->container->set(CurrentCandidateResolver::class, fn (ServiceContainer $c) => new CurrentCandidateResolver(
             $c->get(CandidateRepository::class)
+        ));
+
+        $this->container->set(CandidateLoginController::class, fn (ServiceContainer $c) => new CandidateLoginController(
+            $c->get(CurrentCandidateResolver::class)
         ));
 
         $this->container->set(AttemptRepository::class, static fn () => new AttemptRepository());

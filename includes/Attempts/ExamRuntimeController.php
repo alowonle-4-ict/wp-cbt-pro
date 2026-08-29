@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WPCBTPro\Attempts;
 
 use WPCBTPro\Camera\VerificationRepository;
+use WPCBTPro\Candidates\CandidateLoginController;
 use WPCBTPro\Candidates\CurrentCandidateResolver;
 use WPCBTPro\Exams\ExamRepository;
 use WPCBTPro\Monitoring\MonitoringEventRepository;
@@ -183,7 +184,7 @@ final class ExamRuntimeController
         $message = sprintf(
             /* translators: %s: login URL */
             __('Please <a href="%s">log in</a> to access this exam.', 'wp-cbt-pro'),
-            esc_url(wp_login_url($redirect))
+            esc_url(CandidateLoginController::loginUrl($redirect))
         );
 
         echo '<p class="wpcbtpro-notice">' . wp_kses($message, ['a' => ['href' => true]]) . '</p>';
