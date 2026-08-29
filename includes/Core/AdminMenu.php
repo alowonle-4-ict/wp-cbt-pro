@@ -36,6 +36,20 @@ final class AdminMenu
     {
         add_action('admin_menu', [$this, 'addMenuPages']);
         add_action('admin_enqueue_scripts', [$this, 'enqueueAssets']);
+
+        // Each of these processes its own page's POST/delete requests on
+        // admin_init — before WordPress admin-header.php streams the page's
+        // HTML — because a redirect from inside the add_submenu_page()
+        // render callback itself is always too late (see each controller's
+        // own register()/maybeProcessRequest() docblock).
+        $this->candidatesController->register();
+        $this->wordImportController->register();
+        $this->examsController->register();
+        $this->verificationController->register();
+        $this->programmingController->register();
+        $this->dsaController->register();
+        $this->resultsController->register();
+        $this->mcqController->register();
     }
 
     public function addMenuPages(): void

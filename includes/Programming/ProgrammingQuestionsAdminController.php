@@ -19,6 +19,20 @@ use WPCBTPro\Security\Capabilities;
  */
 final class ProgrammingQuestionsAdminController
 {
+    /**
+     * A POST/delete on this page is processed on admin_init — before
+     * WordPress starts streaming the admin page's HTML — because
+     * wp_safe_redirect() from inside the add_submenu_page() render
+     * callback itself is always too late: WP has already sent the page
+     * header by the time that callback runs, so the redirect silently
+     * fails ("headers already sent") and the admin is left looking at a
+     * blank page. render() only ever displays; it never mutates or redirects.
+     *
+     * @var array<string, string>|null
+     */
+    private ?array $pendingErrors = null;
+    private ?string $pendingAction = null;
+
     public function __construct(
         private readonly QuestionRepository $questions,
         private readonly ProgrammingQuestionRepository $programmingQuestions,
@@ -27,30 +41,48 @@ final class ProgrammingQuestionsAdminController
     ) {
     }
 
+    public function register(): void
+    {
+        add_action('admin_init', [$this, 'maybeProcessRequest']);
+    }
+
+    public function maybeProcessRequest(): void
+    {
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput -- read-only: confirms this hook applies to our own page before doing anything.
+        if (($_GET['page'] ?? '') !== 'wpcbtpro-programming') {
+            return;
+        }
+
+        if (!current_user_can(Capabilities::MANAGE_PROGRAMMING_QUESTIONS)) {
+            return; // render() will wp_die() with the proper message for a real page view.
+        }
+
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput -- read-only routing; the real check happens in handleDelete()/handleSave() below.
+        if (($_GET['action'] ?? '') === 'delete') {
+            $this->handleDelete();
+            return;
+        }
+
+        // handleSave() runs check_admin_referer() as its first statement; the reads below only decide whether to dispatch there.
+        // phpcs:disable WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput
+        if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['wpcbtpro_programming_nonce'])) {
+            $errors = $this->handleSave();
+            if ($errors !== []) {
+                $this->pendingErrors = $errors;
+                $this->pendingAction = empty($_POST['question_id']) ? 'new' : 'edit';
+            }
+        }
+        // phpcs:enable WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput
+    }
+
     public function render(): void
     {
         if (!current_user_can(Capabilities::MANAGE_PROGRAMMING_QUESTIONS)) {
             wp_die(esc_html__('You do not have permission to manage programming questions.', 'wp-cbt-pro'));
         }
 
-        $action = sanitize_key($_GET['action'] ?? 'list');
-
-        if ($action === 'delete') {
-            $this->handleDelete();
-            return;
-        }
-
-        $errors = [];
-        // handleSave() runs check_admin_referer() as its first statement; the reads below only decide whether to dispatch there.
-        // phpcs:disable WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput
-        if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['wpcbtpro_programming_nonce'])) {
-            $errors = $this->handleSave();
-            if ($errors === []) {
-                return;
-            }
-            $action = empty($_POST['question_id']) ? 'new' : 'edit';
-        }
-        // phpcs:enable WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput
+        $errors = $this->pendingErrors ?? [];
+        $action = $this->pendingAction ?? sanitize_key($_GET['action'] ?? 'list');
 
         if (in_array($action, ['new', 'edit'], true)) {
             $this->renderForm($action, $errors);

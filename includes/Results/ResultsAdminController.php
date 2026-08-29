@@ -25,17 +25,39 @@ final class ResultsAdminController
     ) {
     }
 
-    public function render(): void
+    public function register(): void
     {
+        // Processed on admin_init — before WordPress starts streaming the admin
+        // page's HTML — because wp_safe_redirect() from inside the
+        // add_submenu_page() render callback itself is always too late: WP has
+        // already sent the page header by the time that callback runs, so the
+        // redirect silently fails ("headers already sent") and the admin is
+        // left looking at a blank page. render() only ever displays.
+        add_action('admin_init', [$this, 'maybeProcessRequest']);
+    }
+
+    public function maybeProcessRequest(): void
+    {
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput -- read-only: confirms this hook applies to our own page before doing anything.
+        if (($_GET['page'] ?? '') !== 'wpcbtpro-results') {
+            return;
+        }
+
         if (!current_user_can(Capabilities::VIEW_CBT_RESULTS)) {
-            wp_die(esc_html__('You do not have permission to view results.', 'wp-cbt-pro'));
+            return; // render() will wp_die() with the proper message for a real page view.
         }
 
         // handleRelease() runs check_admin_referer() as its first statement; this only decides whether to dispatch there.
         // phpcs:ignore WordPress.Security.NonceVerification, WordPress.Security.ValidatedSanitizedInput
         if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['wpcbtpro_release_nonce'])) {
             $this->handleRelease();
-            return;
+        }
+    }
+
+    public function render(): void
+    {
+        if (!current_user_can(Capabilities::VIEW_CBT_RESULTS)) {
+            wp_die(esc_html__('You do not have permission to view results.', 'wp-cbt-pro'));
         }
 
         $institutionId = current_user_can(Capabilities::MANAGE_CBT) ? null : $this->institutionContext->currentId();
