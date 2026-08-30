@@ -18,6 +18,8 @@ use WPCBTPro\Camera\Contracts\CameraVerificationService;
 use WPCBTPro\Camera\Providers\DefaultCameraVerificationService;
 use WPCBTPro\Camera\VerificationAdminController;
 use WPCBTPro\Camera\VerificationRepository;
+use WPCBTPro\Candidates\CandidateBulkImportAdminController;
+use WPCBTPro\Candidates\CandidateBulkImportService;
 use WPCBTPro\Candidates\CandidateRefGenerator;
 use WPCBTPro\Candidates\CandidateRepository;
 use WPCBTPro\Candidates\CandidateService;
@@ -180,6 +182,20 @@ final class Plugin
             )
         );
         $this->container->set(PhotoUploader::class, static fn () => new PhotoUploader());
+        $this->container->set(
+            CandidateBulkImportService::class,
+            fn (ServiceContainer $c) => new CandidateBulkImportService(
+                $c->get(CandidateService::class),
+                $c->get(CandidateRepository::class)
+            )
+        );
+        $this->container->set(
+            CandidateBulkImportAdminController::class,
+            fn (ServiceContainer $c) => new CandidateBulkImportAdminController(
+                $c->get(CandidateBulkImportService::class),
+                $c->get(InstitutionContext::class)
+            )
+        );
 
         $this->container->set(QuestionTypeRegistry::class, static fn () => new QuestionTypeRegistry());
         $this->container->set(LanguageRegistry::class, static fn () => new LanguageRegistry());
@@ -282,6 +298,7 @@ final class Plugin
             AdminMenu::class,
             fn (ServiceContainer $c) => new AdminMenu(
                 $c->get(CandidatesAdminController::class),
+                $c->get(CandidateBulkImportAdminController::class),
                 $c->get(WordImportAdminController::class),
                 $c->get(ExamsAdminController::class),
                 $c->get(InvigilatorDashboardController::class),

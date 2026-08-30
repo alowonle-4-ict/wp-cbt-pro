@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WPCBTPro\Core;
 
 use WPCBTPro\Camera\VerificationAdminController;
+use WPCBTPro\Candidates\CandidateBulkImportAdminController;
 use WPCBTPro\Candidates\CandidatesAdminController;
 use WPCBTPro\DSA\DsaQuestionsAdminController;
 use WPCBTPro\Exams\ExamsAdminController;
@@ -20,6 +21,7 @@ final class AdminMenu
 {
     public function __construct(
         private readonly CandidatesAdminController $candidatesController,
+        private readonly CandidateBulkImportAdminController $candidateBulkImportController,
         private readonly WordImportAdminController $wordImportController,
         private readonly ExamsAdminController $examsController,
         private readonly InvigilatorDashboardController $invigilatorController,
@@ -43,6 +45,7 @@ final class AdminMenu
         // render callback itself is always too late (see each controller's
         // own register()/maybeProcessRequest() docblock).
         $this->candidatesController->register();
+        $this->candidateBulkImportController->register();
         $this->wordImportController->register();
         $this->examsController->register();
         $this->verificationController->register();
@@ -81,6 +84,15 @@ final class AdminMenu
             Capabilities::MANAGE_CBT_CANDIDATES,
             'wpcbtpro-candidates',
             [$this->candidatesController, 'render']
+        );
+
+        add_submenu_page(
+            'wpcbtpro-exams',
+            __('Import Candidates', 'wp-cbt-pro'),
+            __('Import Candidates', 'wp-cbt-pro'),
+            Capabilities::MANAGE_CBT_CANDIDATES,
+            'wpcbtpro-import-candidates',
+            [$this->candidateBulkImportController, 'render']
         );
 
         add_submenu_page(
