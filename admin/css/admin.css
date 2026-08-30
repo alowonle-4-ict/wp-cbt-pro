@@ -128,6 +128,23 @@
     vertical-align: middle;
 }
 
+.wpcbtpro-picker-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 12px 0;
+    padding: 10px;
+    background: #f6f7f7;
+    border: 1px solid #dcdcde;
+}
+
+.wpcbtpro-picker-toolbar__count {
+    color: #646970;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
 .wpcbtpro-pool-row {
     display: flex;
     align-items: center;

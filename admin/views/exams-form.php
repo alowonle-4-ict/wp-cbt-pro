@@ -211,7 +211,7 @@ $listUrl = add_query_arg(['page' => 'wpcbtpro-exams'], admin_url('admin.php'));
                                 <td><input type="checkbox" name="assign[<?php echo esc_attr((string) $qid); ?>][include]" value="1" <?php checked($assigned !== null); ?>></td>
                                 <td><?php echo wp_kses_post(wp_trim_words(wp_strip_all_tags($question['content']), 16)); ?></td>
                                 <td><?php echo esc_html($question['type']); ?></td>
-                                <td><input type="text" name="assign[<?php echo esc_attr((string) $qid); ?>][pool]" value="<?php echo esc_attr($assigned['pool_id'] ?? ''); ?>" class="small-text"></td>
+                                <td><input type="text" name="assign[<?php echo esc_attr((string) $qid); ?>][pool]" value="<?php echo esc_attr($assigned['pool_id'] ?? ''); ?>" class="regular-text"></td>
                                 <td><input type="number" name="assign[<?php echo esc_attr((string) $qid); ?>][order]" value="<?php echo esc_attr((string) ($assigned['sort_order'] ?? 0)); ?>" class="small-text"></td>
                             </tr>
                         <?php endforeach; ?>

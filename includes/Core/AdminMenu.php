@@ -179,5 +179,15 @@ final class AdminMenu
                 true
             );
         }
+
+        if (str_contains($hook, 'wpcbtpro-exams')) {
+            wp_enqueue_script(
+                'wpcbtpro-exam-question-picker',
+                WPCBTPRO_URL . 'admin/js/exam-question-picker.js',
+                [],
+                WPCBTPRO_VERSION,
+                true
+            );
+        }
     }
 }
