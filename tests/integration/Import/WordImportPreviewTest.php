@@ -33,6 +33,7 @@ final class WordImportPreviewTest extends \WP_UnitTestCase
 
         $session = 'test-session';
         $mathmlAllowedHtml = array_merge(wp_kses_allowed_html('post'), OmmlToMathMlConverter::allowedKsesTags());
+        $mathmlAllowedProtocols = array_merge(wp_allowed_protocols(), ['data']);
 
         ob_start();
         include WPCBTPRO_PATH . 'admin/views/import-preview.php';

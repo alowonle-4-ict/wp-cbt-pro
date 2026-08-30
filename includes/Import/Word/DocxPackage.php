@@ -11,7 +11,17 @@ namespace WPCBTPro\Import\Word;
  */
 final class DocxPackage
 {
+    private const MIME_BY_EXTENSION = [
+        'png' => 'image/png',
+        'jpg' => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
+        'gif' => 'image/gif',
+    ];
+
     private \ZipArchive $zip;
+
+    /** @var array<string, string>|null */
+    private ?array $relationshipsCache = null;
 
     private function __construct(private readonly string $path)
     {
@@ -47,9 +57,13 @@ final class DocxPackage
     /** @return array<string, string> relationship id => target path within the package */
     public function relationships(): array
     {
+        if ($this->relationshipsCache !== null) {
+            return $this->relationshipsCache;
+        }
+
         $raw = $this->zip->getFromName('word/_rels/document.xml.rels');
         if ($raw === false) {
-            return [];
+            return $this->relationshipsCache = [];
         }
 
         $dom = new \DOMDocument();
@@ -62,13 +76,40 @@ final class DocxPackage
             $map[$id] = 'word/' . ltrim($target, '/');
         }
 
-        return $map;
+        return $this->relationshipsCache = $map;
     }
 
     public function readBinary(string $pathInPackage): ?string
     {
         $data = $this->zip->getFromName($pathInPackage);
         return $data === false ? null : $data;
+    }
+
+    /**
+     * Resolves a w:drawing's r:embed relationship id to an inline data: URI,
+     * for the import preview to render before anything is uploaded (§6.3).
+     * Only common web-renderable raster formats are supported — a .docx can
+     * embed EMF/WMF vector images, which browsers can't display inline, so
+     * those are silently skipped rather than producing a broken <img>.
+     */
+    public function imageDataUri(string $relationshipId): ?string
+    {
+        $target = $this->relationships()[$relationshipId] ?? null;
+        if ($target === null) {
+            return null;
+        }
+
+        $mime = self::MIME_BY_EXTENSION[strtolower((string) pathinfo($target, PATHINFO_EXTENSION))] ?? null;
+        if ($mime === null) {
+            return null;
+        }
+
+        $binary = $this->readBinary($target);
+        if ($binary === null) {
+            return null;
+        }
+
+        return 'data:' . $mime . ';base64,' . base64_encode($binary);
     }
 
     public function close(): void

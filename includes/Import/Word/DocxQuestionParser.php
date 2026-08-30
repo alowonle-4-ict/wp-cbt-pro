@@ -14,21 +14,31 @@ final class DocxQuestionParser
 {
     private const W_NS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
     private const M_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/math';
+    private const A_NS = 'http://schemas.openxmlformats.org/drawingml/2006/main';
+    private const R_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+
+    /** @var (callable(string): ?string)|null set for the duration of a single parse() call */
+    private $imageResolver = null;
 
     public function __construct(private readonly OmmlToMathMlConverter $equationConverter)
     {
     }
 
     /**
+     * @param (callable(string): ?string)|null $imageResolver maps a w:drawing's
+     *        r:embed relationship id to an inline data: URI, or null to skip it
      * @return array<int, array<string, mixed>> parsed blocks, one per QUESTION marker
      */
-    public function parse(string $documentXml): array
+    public function parse(string $documentXml, ?callable $imageResolver = null): array
     {
+        $this->imageResolver = $imageResolver;
+
         $dom = new \DOMDocument();
         $dom->loadXML($documentXml, LIBXML_NONET | LIBXML_NOENT);
 
         $body = $dom->getElementsByTagNameNS(self::W_NS, 'body')->item(0);
         if ($body === null) {
+            $this->imageResolver = null;
             return [];
         }
 
@@ -99,6 +109,8 @@ final class DocxQuestionParser
             $blocks[] = $this->finalize($current);
         }
 
+        $this->imageResolver = null;
+
         return $blocks;
     }
 
@@ -150,13 +162,45 @@ final class DocxQuestionParser
                 $html .= $this->equationConverter->convert($node);
                 $hadEquation = true;
                 array_push($warnings, ...$this->equationConverter->warnings());
+            } elseif ($node->namespaceURI === self::W_NS && $node->localName === 'drawing') {
+                $html .= $this->renderDrawing($node);
             }
         }
 
         return [$html, $hadEquation, $warnings];
     }
 
-    /** @return \DOMElement[] leaf nodes (w:t, w:tab, m:oMath) in document order, without descending into an already-consumed m:oMath */
+    /**
+     * A w:drawing wraps a:blip r:embed, which names a relationship id rather
+     * than the image bytes themselves — resolving it needs the package's
+     * relationships/media, which this parser doesn't have, so the caller
+     * supplies a resolver instead of this class knowing about ZIP internals.
+     */
+    private function renderDrawing(\DOMElement $drawing): string
+    {
+        if ($this->imageResolver === null) {
+            return '';
+        }
+
+        $blip = $drawing->getElementsByTagNameNS(self::A_NS, 'blip')->item(0);
+        if ($blip === null) {
+            return '';
+        }
+
+        $relationshipId = $blip->getAttributeNS(self::R_NS, 'embed');
+        if ($relationshipId === '') {
+            return '';
+        }
+
+        $dataUri = ($this->imageResolver)($relationshipId);
+        if ($dataUri === null) {
+            return '';
+        }
+
+        return '<img src="' . htmlspecialchars($dataUri, ENT_QUOTES | ENT_XML1) . '" alt="">';
+    }
+
+    /** @return \DOMElement[] leaf nodes (w:t, w:tab, m:oMath, w:drawing) in document order, without descending into an already-consumed m:oMath/w:drawing */
     private function descendantsInOrder(\DOMElement $paragraph): array
     {
         $result = [];
@@ -177,7 +221,7 @@ final class DocxQuestionParser
                 continue; // don't descend — the converter walks this subtree itself
             }
 
-            if ($child->namespaceURI === self::W_NS && in_array($child->localName, ['t', 'tab'], true)) {
+            if ($child->namespaceURI === self::W_NS && in_array($child->localName, ['t', 'tab', 'drawing'], true)) {
                 $result[] = $child;
                 continue;
             }

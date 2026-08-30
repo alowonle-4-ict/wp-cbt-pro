@@ -37,6 +37,7 @@ use WPCBTPro\Exams\ExamRepository;
 use WPCBTPro\Exams\ExamService;
 use WPCBTPro\Exams\ExamsAdminController;
 use WPCBTPro\Exams\RandomizationService;
+use WPCBTPro\Import\Word\EmbeddedImageUploader;
 use WPCBTPro\Import\Word\WordImportAdminController;
 use WPCBTPro\Import\Word\WordImportService;
 use WPCBTPro\Institutions\InstitutionContext;
@@ -240,12 +241,14 @@ final class Plugin
             WordImportService::class,
             fn (ServiceContainer $c) => new WordImportService($c->get(QuestionTypeRegistry::class))
         );
+        $this->container->set(EmbeddedImageUploader::class, static fn () => new EmbeddedImageUploader());
         $this->container->set(
             WordImportAdminController::class,
             fn (ServiceContainer $c) => new WordImportAdminController(
                 $c->get(WordImportService::class),
                 $c->get(QuestionRepository::class),
-                $c->get(InstitutionContext::class)
+                $c->get(InstitutionContext::class),
+                $c->get(EmbeddedImageUploader::class)
             )
         );
 

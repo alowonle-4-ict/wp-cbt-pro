@@ -3,6 +3,7 @@
  * @var string $session
  * @var array<int, array<string, mixed>> $rows
  * @var array<string, array<string, bool>> $mathmlAllowedHtml
+ * @var array<int, string> $mathmlAllowedProtocols
  */
 if (!defined('ABSPATH')) {
     exit;
@@ -35,13 +36,13 @@ if (!defined('ABSPATH')) {
                 </label>
 
                 <div class="wpcbtpro-import-row__body">
-                    <?php echo wp_kses($block['body_html'], $mathmlAllowedHtml); ?>
+                    <?php echo wp_kses($block['body_html'], $mathmlAllowedHtml, $mathmlAllowedProtocols); ?>
                     <?php if (!empty($block['options'])): ?>
                         <ul class="wpcbtpro-import-row__options">
                             <?php foreach ($block['options'] as $option): ?>
                                 <li>
                                     <?php echo esc_html($option['letter']); ?>.
-                                    <?php echo wp_kses($option['html'], $mathmlAllowedHtml); ?>
+                                    <?php echo wp_kses($option['html'], $mathmlAllowedHtml, $mathmlAllowedProtocols); ?>
                                 </li>
                             <?php endforeach; ?>
                         </ul>

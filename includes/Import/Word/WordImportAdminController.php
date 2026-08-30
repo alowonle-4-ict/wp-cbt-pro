@@ -23,6 +23,7 @@ final class WordImportAdminController
         private readonly WordImportService $importService,
         private readonly QuestionRepository $questionRepository,
         private readonly InstitutionContext $institutionContext,
+        private readonly EmbeddedImageUploader $imageUploader,
     ) {
     }
 
@@ -88,6 +89,12 @@ final class WordImportAdminController
     private function renderPreview(string $session, array $rows): void
     {
         $mathmlAllowedHtml = array_merge(wp_kses_allowed_html('post'), OmmlToMathMlConverter::allowedKsesTags());
+        // 'data' isn't in WordPress's default kses protocol allowlist — needed
+        // here because a Word-document image is rendered as a data: URI in
+        // this preview, before it's ever uploaded (see EmbeddedImageUploader,
+        // which replaces it with a real attachment URL once the row is
+        // actually confirmed).
+        $mathmlAllowedProtocols = array_merge(wp_allowed_protocols(), ['data']);
         include WPCBTPRO_PATH . 'admin/views/import-preview.php';
     }
 
@@ -160,6 +167,11 @@ final class WordImportAdminController
             $mapped = $row['mapped'];
             $options = $mapped['options'] ?? [];
             unset($mapped['options']);
+
+            $mapped['content'] = $this->imageUploader->persist((string) $mapped['content'], 'wpcbtpro-question');
+            foreach ($options as $optionIndex => $option) {
+                $options[$optionIndex]['label'] = $this->imageUploader->persist((string) $option['label'], 'wpcbtpro-question-option');
+            }
 
             $questionId = $this->questionRepository->insert(array_merge($mapped, [
                 'institution_id' => $institutionId,

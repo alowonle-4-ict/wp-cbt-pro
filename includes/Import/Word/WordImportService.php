@@ -52,9 +52,15 @@ final class WordImportService
     {
         $package = DocxPackage::open($filePath);
         $documentXml = $package->documentXml();
+
+        $blocks = (new DocxQuestionParser(new OmmlToMathMlConverter()))->parse(
+            $documentXml,
+            static fn (string $relationshipId): ?string => $package->imageDataUri($relationshipId)
+        );
+
         $package->close();
 
-        return (new DocxQuestionParser(new OmmlToMathMlConverter()))->parse($documentXml);
+        return $blocks;
     }
 
     /** @return array<int, array<string, mixed>> */
