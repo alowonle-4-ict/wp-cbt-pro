@@ -36,17 +36,36 @@ final class WordImportService
     {
     }
 
-    /** @return array<int, array<string, mixed>> preview rows, one per parsed block */
-    public function parseFile(string $filePath): array
+    /**
+     * @param string $extension 'docx' or 'txt', already validated by the caller
+     * @return array<int, array<string, mixed>> preview rows, one per parsed block
+     */
+    public function parseFile(string $filePath, string $extension = 'docx'): array
+    {
+        $blocks = $extension === 'txt' ? $this->parseTxtFile($filePath) : $this->parseDocxFile($filePath);
+
+        return array_map(fn (array $block) => $this->buildPreviewRow($block), $blocks);
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function parseDocxFile(string $filePath): array
     {
         $package = DocxPackage::open($filePath);
         $documentXml = $package->documentXml();
         $package->close();
 
-        $parser = new DocxQuestionParser(new OmmlToMathMlConverter());
-        $blocks = $parser->parse($documentXml);
+        return (new DocxQuestionParser(new OmmlToMathMlConverter()))->parse($documentXml);
+    }
 
-        return array_map(fn (array $block) => $this->buildPreviewRow($block), $blocks);
+    /** @return array<int, array<string, mixed>> */
+    private function parseTxtFile(string $filePath): array
+    {
+        $contents = file_get_contents($filePath);
+        if ($contents === false) {
+            throw new \RuntimeException(__('Could not read this file.', 'wp-cbt-pro'));
+        }
+
+        return (new TxtQuestionParser())->parse($contents);
     }
 
     /** @param array<string, mixed> $block */

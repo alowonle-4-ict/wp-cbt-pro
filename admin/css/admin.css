@@ -145,6 +145,18 @@
     white-space: nowrap;
 }
 
+.wpcbtpro-txt-format-help {
+    margin: 12px 0;
+}
+
+.wpcbtpro-txt-format-help pre {
+    background: #f6f7f7;
+    border: 1px solid #dcdcde;
+    padding: 10px 14px;
+    max-width: 480px;
+    overflow-x: auto;
+}
+
 .wpcbtpro-pool-row {
     display: flex;
     align-items: center;

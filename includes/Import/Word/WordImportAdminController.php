@@ -100,8 +100,9 @@ final class WordImportAdminController
         }
 
         $filename = sanitize_file_name($_FILES['wpcbtpro_docx']['name']);
-        if (strtolower((string) pathinfo($filename, PATHINFO_EXTENSION)) !== 'docx') {
-            wp_die(esc_html__('Please upload a .docx file.', 'wp-cbt-pro'));
+        $extension = strtolower((string) pathinfo($filename, PATHINFO_EXTENSION));
+        if (!in_array($extension, ['docx', 'txt'], true)) {
+            wp_die(esc_html__('Please upload a .docx or .txt file.', 'wp-cbt-pro'));
         }
 
         // phpcs:ignore WordPress.Security.ValidatedSanitizedInput -- is_uploaded_file() below is the correct validation for a tmp_name, not sanitize_text_field().
@@ -111,7 +112,7 @@ final class WordImportAdminController
         }
 
         try {
-            $rows = $this->importService->parseFile($tmpPath);
+            $rows = $this->importService->parseFile($tmpPath, $extension);
         } catch (\Throwable $e) {
             wp_die(esc_html(sprintf(
                 /* translators: %s: underlying error message */
@@ -121,7 +122,10 @@ final class WordImportAdminController
         }
 
         if ($rows === []) {
-            wp_die(esc_html__('No "QUESTION" blocks were found in this document. Use the downloadable template as a starting point.', 'wp-cbt-pro'));
+            $message = $extension === 'txt'
+                ? __('No questions were found in this file. Separate each question (with its A./B./… options) from the next with a blank line.', 'wp-cbt-pro')
+                : __('No "QUESTION" blocks were found in this document. Use the downloadable template as a starting point.', 'wp-cbt-pro');
+            wp_die(esc_html($message));
         }
 
         $session = wp_generate_password(16, false, false);

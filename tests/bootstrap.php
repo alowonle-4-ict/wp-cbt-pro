@@ -24,3 +24,15 @@ if (!function_exists('esc_html')) {
         return htmlspecialchars($text, ENT_QUOTES);
     }
 }
+
+if (!function_exists('wp_strip_all_tags')) {
+    function wp_strip_all_tags(string $text, bool $removeBreaks = false): string
+    {
+        $text = (string) preg_replace('@<(script|style)[^>]*?>.*?</\\1>@si', '', $text);
+        $text = strip_tags($text);
+        if ($removeBreaks) {
+            $text = (string) preg_replace('/[\r\n\t ]+/', ' ', $text);
+        }
+        return trim($text);
+    }
+}
