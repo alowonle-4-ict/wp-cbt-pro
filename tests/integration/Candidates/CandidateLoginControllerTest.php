@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace WPCBTPro\Tests\Integration\Candidates;
 
 use WPCBTPro\Candidates\CandidateLoginController;
+use WPCBTPro\Candidates\CandidateRepository;
 use WPCBTPro\Core\Plugin;
+use WPCBTPro\Exams\ExamRepository;
+use WPCBTPro\Institutions\InstitutionRepository;
 
 /**
  * Exercises the real shortcode + the controller's login handler together,
@@ -111,5 +114,111 @@ final class CandidateLoginControllerTest extends \WP_UnitTestCase
 
         $html = do_shortcode('[wpcbtpro_login]');
         self::assertStringContainsString('Incorrect username/email or password', $html);
+    }
+
+    /**
+     * The actual ask this covers: a candidate who goes straight to the bare
+     * login page (no exam-page "please log in" link, so no redirect_to)
+     * should still land on their exam afterward, not the homepage — as long
+     * as there's exactly one exam available to send them to unambiguously.
+     */
+    public function testSuccessfulLoginWithNoRedirectTargetGoesStraightToTheOneAvailableExam(): void
+    {
+        $institutionId = (new InstitutionRepository())->ensureDefault();
+
+        $examId = (new ExamRepository())->insert([
+            'institution_id' => $institutionId,
+            'name' => 'Only Exam',
+            'duration_minutes' => 30,
+            'attempt_limit' => 1,
+            'status' => 'active',
+            'result_visibility' => 'immediate',
+        ]);
+
+        $examPageId = self::factory()->post->create([
+            'post_type' => 'page',
+            'post_status' => 'publish',
+            'post_content' => '[wpcbtpro_exam id="' . $examId . '"]',
+        ]);
+        $GLOBALS['post'] = get_post($examPageId);
+        $this->go_to(get_permalink($examPageId));
+        do_shortcode('[wpcbtpro_exam id="' . $examId . '"]'); // self-registers the exam's page URL
+
+        // Back to the login page for the actual login request.
+        $GLOBALS['post'] = get_post($this->pageId);
+        $this->go_to(get_permalink($this->pageId));
+
+        $userId = self::factory()->user->create(['user_login' => 'onlyexamcandidate', 'user_pass' => 'secret pass']);
+        (new CandidateRepository())->insert([
+            'institution_id' => $institutionId,
+            'candidate_ref' => 'CBT-LOGIN-' . wp_generate_password(6, false, false),
+            'first_name' => 'Only',
+            'last_name' => 'Exam',
+            'status' => 'active',
+            'wp_user_id' => $userId,
+        ]);
+
+        $_SERVER['REQUEST_METHOD'] = 'POST';
+        $_POST['wpcbtpro_login_nonce'] = wp_create_nonce('wpcbtpro_candidate_login');
+        $_POST['wpcbtpro_login_user'] = 'onlyexamcandidate';
+        $_POST['wpcbtpro_login_pass'] = 'secret pass';
+        $_POST['redirect_to'] = '';
+
+        $caughtLocation = null;
+        add_filter('wp_redirect', function (string $location) use (&$caughtLocation): string {
+            $caughtLocation = $location;
+            throw new \Exception('redirect-intercepted');
+        });
+
+        try {
+            $this->controller->maybeProcessLogin();
+            self::fail('Expected the redirect to be intercepted.');
+        } catch (\Exception $e) {
+            self::assertSame('redirect-intercepted', $e->getMessage());
+        }
+
+        $expectedUrl = explode('?', get_permalink($examPageId))[0];
+        self::assertStringStartsWith(
+            $expectedUrl,
+            $caughtLocation,
+            'With exactly one exam available and no explicit redirect target, login should go straight to that exam, not the homepage.'
+        );
+    }
+
+    public function testSuccessfulLoginWithNoAvailableExamsStaysOnTheLoginPageInsteadOfGuessing(): void
+    {
+        $institutionId = (new InstitutionRepository())->ensureDefault();
+
+        $userId = self::factory()->user->create(['user_login' => 'noexamcandidate', 'user_pass' => 'secret pass']);
+        (new CandidateRepository())->insert([
+            'institution_id' => $institutionId,
+            'candidate_ref' => 'CBT-LOGIN-' . wp_generate_password(6, false, false),
+            'first_name' => 'No',
+            'last_name' => 'Exam',
+            'status' => 'active',
+            'wp_user_id' => $userId,
+        ]);
+
+        $_SERVER['REQUEST_METHOD'] = 'POST';
+        $_POST['wpcbtpro_login_nonce'] = wp_create_nonce('wpcbtpro_candidate_login');
+        $_POST['wpcbtpro_login_user'] = 'noexamcandidate';
+        $_POST['wpcbtpro_login_pass'] = 'secret pass';
+        $_POST['redirect_to'] = '';
+
+        $caughtLocation = null;
+        add_filter('wp_redirect', function (string $location) use (&$caughtLocation): string {
+            $caughtLocation = $location;
+            throw new \Exception('redirect-intercepted');
+        });
+
+        try {
+            $this->controller->maybeProcessLogin();
+            self::fail('Expected the redirect to be intercepted.');
+        } catch (\Exception $e) {
+            self::assertSame('redirect-intercepted', $e->getMessage());
+        }
+
+        $expectedUrl = explode('?', get_permalink($this->pageId))[0];
+        self::assertStringStartsWith($expectedUrl, $caughtLocation);
     }
 }

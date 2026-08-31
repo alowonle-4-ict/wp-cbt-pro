@@ -30,8 +30,11 @@ final class CandidateLoginController
 
     private ?string $pendingError = null;
 
-    public function __construct(private readonly CurrentCandidateResolver $candidateResolver)
-    {
+    public function __construct(
+        private readonly CurrentCandidateResolver $candidateResolver,
+        private readonly CandidateRepository $candidateRepository,
+        private readonly CandidateExamFinder $examFinder,
+    ) {
     }
 
     public function register(): void
@@ -97,7 +100,31 @@ final class CandidateLoginController
             return;
         }
 
-        wp_safe_redirect($redirectTo !== '' ? $redirectTo : home_url('/'));
+        if ($redirectTo !== '') {
+            wp_safe_redirect($redirectTo);
+            exit;
+        }
+
+        // No specific page asked for this login (e.g. the candidate came
+        // straight to this page rather than via an exam's "please log in"
+        // link) — wp_signon() doesn't set the current user for this same
+        // request (see its own docblock), so the just-authenticated
+        // WP_User it returned is used directly rather than
+        // CurrentCandidateResolver, which reads get_current_user_id().
+        $candidate = $this->candidateRepository->findByWpUserId($result->ID);
+        $exams = $candidate !== null ? $this->examFinder->availableFor($candidate) : [];
+
+        if (count($exams) === 1) {
+            wp_safe_redirect($exams[0]['url']);
+            exit;
+        }
+
+        // Zero or multiple exams: no single destination to guess at safely —
+        // land back on this same page, now rendered logged-in (see
+        // renderAlreadyLoggedIn()), which lists whatever is available.
+        $pageId = (int) get_option(self::LOGIN_PAGE_OPTION);
+        $selfUrl = $pageId > 0 ? get_permalink($pageId) : false;
+        wp_safe_redirect($selfUrl !== false ? $selfUrl : home_url('/'));
         exit;
     }
 
@@ -131,20 +158,35 @@ final class CandidateLoginController
     {
         $candidate = $this->candidateResolver->resolve();
         $logoutUrl = wp_logout_url(get_permalink() ?: home_url('/'));
+        $logoutLink = '<a href="' . esc_url($logoutUrl) . '">' . esc_html__('Log out', 'wp-cbt-pro') . '</a>';
 
         if ($candidate === null) {
             return '<p class="wpcbtpro-notice">' . sprintf(
                 /* translators: %s: log out link */
                 esc_html__('You\'re signed in, but this account isn\'t registered as an exam candidate. %s', 'wp-cbt-pro'),
-                '<a href="' . esc_url($logoutUrl) . '">' . esc_html__('Log out', 'wp-cbt-pro') . '</a>'
+                $logoutLink
             ) . '</p>';
         }
 
-        return '<p class="wpcbtpro-notice">' . sprintf(
+        $exams = $this->examFinder->availableFor($candidate);
+
+        $html = '<p class="wpcbtpro-notice">' . sprintf(
             /* translators: 1: candidate name, 2: log out link */
             esc_html__('You\'re signed in as %1$s. %2$s', 'wp-cbt-pro'),
             esc_html(trim($candidate['first_name'] . ' ' . $candidate['last_name'])),
-            '<a href="' . esc_url($logoutUrl) . '">' . esc_html__('Log out', 'wp-cbt-pro') . '</a>'
+            $logoutLink
         ) . '</p>';
+
+        if ($exams === []) {
+            $html .= '<p>' . esc_html__('No exams are currently available to you.', 'wp-cbt-pro') . '</p>';
+        } else {
+            $html .= '<ul class="wpcbtpro-candidate-exam-list">';
+            foreach ($exams as $entry) {
+                $html .= '<li><a href="' . esc_url($entry['url']) . '">' . esc_html($entry['exam']['name']) . '</a></li>';
+            }
+            $html .= '</ul>';
+        }
+
+        return $html;
     }
 }

@@ -22,6 +22,14 @@ use WPCBTPro\Results\ResultRepository;
  */
 final class ExamRuntimeController
 {
+    // Maps exam id => the id of the page that embeds it, so a candidate can
+    // be sent straight to "their" exam after logging in (see
+    // CandidateExamFinder) without an admin having to configure that link
+    // separately — self-registered the same way CandidateLoginController
+    // remembers its own page, the first time each exam's shortcode renders
+    // on a real page.
+    private const EXAM_PAGES_OPTION = 'wpcbtpro_exam_pages';
+
     public function __construct(
         private readonly CurrentCandidateResolver $candidateResolver,
         private readonly AttemptService $attemptService,
@@ -50,9 +58,41 @@ final class ExamRuntimeController
             return '<p class="wpcbtpro-notice">' . esc_html__('No exam was specified.', 'wp-cbt-pro') . '</p>';
         }
 
+        if (is_singular()) {
+            $pages = get_option(self::EXAM_PAGES_OPTION);
+            $pages = is_array($pages) ? $pages : [];
+            if (($pages[$examId] ?? null) !== get_the_ID()) {
+                $pages[$examId] = get_the_ID();
+                update_option(self::EXAM_PAGES_OPTION, $pages);
+            }
+        }
+
         ob_start();
         $this->render($examId);
         return (string) ob_get_clean();
+    }
+
+    /**
+     * The URL of the page embedding [wpcbtpro_exam id="$examId"], if that
+     * page has ever been viewed (which is how it gets registered above) and
+     * is still published — null otherwise, e.g. an exam nobody has embedded
+     * anywhere yet, or whose page was later unpublished.
+     */
+    public static function examUrl(int $examId): ?string
+    {
+        $pages = get_option(self::EXAM_PAGES_OPTION);
+        $pageId = is_array($pages) ? ($pages[$examId] ?? null) : null;
+        if ($pageId === null) {
+            return null;
+        }
+
+        $page = get_post((int) $pageId);
+        if ($page === null || $page->post_status !== 'publish') {
+            return null;
+        }
+
+        $url = get_permalink((int) $pageId);
+        return $url !== false ? $url : null;
     }
 
     private function render(int $examId): void

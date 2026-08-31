@@ -21,6 +21,7 @@ use WPCBTPro\Camera\VerificationRepository;
 use WPCBTPro\Candidates\CandidateBulkImportAdminController;
 use WPCBTPro\Candidates\CandidateBulkImportService;
 use WPCBTPro\Candidates\CandidateRefGenerator;
+use WPCBTPro\Candidates\CandidateExamFinder;
 use WPCBTPro\Candidates\CandidateRepository;
 use WPCBTPro\Candidates\CandidateService;
 use WPCBTPro\Candidates\CandidateLoginController;
@@ -367,8 +368,15 @@ final class Plugin
             $c->get(CandidateRepository::class)
         ));
 
+        $this->container->set(CandidateExamFinder::class, fn (ServiceContainer $c) => new CandidateExamFinder(
+            $c->get(ExamRepository::class),
+            $c->get(ExamCandidateRosterRepository::class)
+        ));
+
         $this->container->set(CandidateLoginController::class, fn (ServiceContainer $c) => new CandidateLoginController(
-            $c->get(CurrentCandidateResolver::class)
+            $c->get(CurrentCandidateResolver::class),
+            $c->get(CandidateRepository::class),
+            $c->get(CandidateExamFinder::class)
         ));
 
         $this->container->set(AttemptRepository::class, static fn () => new AttemptRepository());
