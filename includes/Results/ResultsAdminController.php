@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace WPCBTPro\Results;
 
 use WPCBTPro\Candidates\CandidateRepository;
+use WPCBTPro\Core\SpreadsheetSupport;
 use WPCBTPro\Exams\ExamRepository;
 use WPCBTPro\Institutions\InstitutionContext;
 use WPCBTPro\Security\AuditLogger;
@@ -90,9 +91,14 @@ final class ResultsAdminController
 
         $canRelease = current_user_can(Capabilities::MANAGE_CBT_EXAMS);
         $csvUrl = $exam !== null ? wp_nonce_url(
-            add_query_arg(['action' => 'wpcbtpro_export_results_csv', 'exam_id' => $examId], admin_url('admin-post.php')),
-            'wpcbtpro_export_results_csv_' . $examId
+            add_query_arg(['action' => 'wpcbtpro_export_results', 'exam_id' => $examId, 'format' => 'csv'], admin_url('admin-post.php')),
+            'wpcbtpro_export_results_' . $examId
         ) : '';
+        $xlsxUrl = $exam !== null ? wp_nonce_url(
+            add_query_arg(['action' => 'wpcbtpro_export_results', 'exam_id' => $examId, 'format' => 'xlsx'], admin_url('admin-post.php')),
+            'wpcbtpro_export_results_' . $examId
+        ) : '';
+        $xlsxAvailable = SpreadsheetSupport::available();
 
         include WPCBTPRO_PATH . 'admin/views/results-list.php';
     }

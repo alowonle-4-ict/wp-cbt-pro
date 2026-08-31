@@ -7,6 +7,8 @@
  * @var array<string,mixed>|null $analytics
  * @var bool $canRelease
  * @var string $csvUrl
+ * @var string $xlsxUrl
+ * @var bool $xlsxAvailable
  */
 if (!defined('ABSPATH')) {
     exit;
@@ -50,6 +52,9 @@ if (!defined('ABSPATH')) {
                 </form>
             <?php endif; ?>
             <a href="<?php echo esc_url($csvUrl); ?>" class="button"><?php esc_html_e('Download CSV', 'wp-cbt-pro'); ?></a>
+            <?php if ($xlsxAvailable): ?>
+                <a href="<?php echo esc_url($xlsxUrl); ?>" class="button"><?php esc_html_e('Download Excel', 'wp-cbt-pro'); ?></a>
+            <?php endif; ?>
             <button type="button" class="button" onclick="window.print();"><?php esc_html_e('Print / Save as PDF', 'wp-cbt-pro'); ?></button>
         </div>
 

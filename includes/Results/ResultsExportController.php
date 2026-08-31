@@ -4,30 +4,32 @@ declare(strict_types=1);
 
 namespace WPCBTPro\Results;
 
-use WPCBTPro\Candidates\CandidateRepository;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use WPCBTPro\Core\SpreadsheetSupport;
 use WPCBTPro\Exams\ExamRepository;
 use WPCBTPro\Institutions\InstitutionContext;
 use WPCBTPro\Security\Capabilities;
 
 /**
- * A real CSV — not a claimed .xlsx it doesn't actually produce. Excel,
- * Sheets, and every gradebook tool open CSV natively; generating a genuine
- * binary spreadsheet format would mean bundling a library this plugin
- * doesn't otherwise need (§44).
+ * CSV (the default, since Excel/Sheets/every gradebook tool opens it
+ * natively with no extra dependency) plus a real .xlsx option — now that
+ * phpoffice/phpspreadsheet is a real dependency (added for candidate/roster
+ * import, §44) — for anyone who specifically wants a native Excel file
+ * rather than a text export. Just headers/auth/exit glue: ResultsExportService
+ * builds the actual data.
  */
 final class ResultsExportController
 {
     public function __construct(
-        private readonly ResultRepository $results,
+        private readonly ResultsExportService $exportService,
         private readonly ExamRepository $exams,
-        private readonly CandidateRepository $candidates,
         private readonly InstitutionContext $institutionContext,
     ) {
     }
 
     public function register(): void
     {
-        add_action('admin_post_wpcbtpro_export_results_csv', [$this, 'handle']);
+        add_action('admin_post_wpcbtpro_export_results', [$this, 'handle']);
     }
 
     public function handle(): void
@@ -38,7 +40,7 @@ final class ResultsExportController
 
         // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- exam_id is only used to build the nonce action string; check_admin_referer() below rejects any tampering.
         $examId = isset($_GET['exam_id']) ? absint($_GET['exam_id']) : 0;
-        check_admin_referer('wpcbtpro_export_results_csv_' . $examId);
+        check_admin_referer('wpcbtpro_export_results_' . $examId);
 
         $exam = $this->exams->find($examId);
         if ($exam === null) {
@@ -52,47 +54,46 @@ final class ResultsExportController
             wp_die(esc_html__('You do not have permission to export this exam.', 'wp-cbt-pro'));
         }
 
-        $filename = sanitize_file_name($exam['name']) . '-results.csv';
+        // phpcs:ignore WordPress.Security.NonceVerification.Recommended, WordPress.Security.ValidatedSanitizedInput -- only ever chooses which export function below runs; not a state change.
+        $format = sanitize_key($_GET['format'] ?? 'csv');
+        $rows = $this->exportService->buildRows($examId);
+
+        if ($format === 'xlsx' && SpreadsheetSupport::available()) {
+            $this->exportXlsx($exam['name'], $rows);
+        } else {
+            $this->exportCsv($exam['name'], $rows);
+        }
+
+        exit;
+    }
+
+    /** @param array<int, array<int, mixed>> $rows */
+    private function exportCsv(string $examName, array $rows): void
+    {
+        $filename = sanitize_file_name($examName) . '-results.csv';
 
         nocache_headers();
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
 
         $out = fopen('php://output', 'w');
-        fputcsv($out, [
-            'Candidate Name', 'Candidate ID', 'Score', 'Percentage', 'Grade',
-            'Pass/Fail', 'Correct', 'Incorrect', 'Unanswered', 'Pending Review',
-            'Status', 'Time Used (s)', 'Submitted At', 'Released',
-        ]);
-
-        $examResults = $this->results->allForExam($examId);
-        $candidates = $this->candidates->findMany(array_column($examResults, 'candidate_id'));
-
-        foreach ($examResults as $result) {
-            $candidate = $candidates[(int) $result['candidate_id']] ?? null;
-            if ($candidate === null) {
-                continue;
-            }
-
-            fputcsv($out, [
-                trim($candidate['first_name'] . ' ' . $candidate['last_name']),
-                $candidate['candidate_ref'],
-                $result['score'],
-                $result['percentage'],
-                $result['grade'] ?? '',
-                $result['pass_status'] ?? '',
-                $result['correct_count'],
-                $result['incorrect_count'],
-                $result['unanswered_count'],
-                $result['pending_review_count'],
-                $result['status'],
-                $result['time_used_seconds'],
-                $result['submitted_at'],
-                empty($result['released_at']) ? 'No' : 'Yes',
-            ]);
+        fputcsv($out, ResultsExportService::COLUMNS);
+        foreach ($rows as $row) {
+            fputcsv($out, $row);
         }
-
         fclose($out); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- streaming to php://output, which WP_Filesystem cannot address.
-        exit;
+    }
+
+    /** @param array<int, array<int, mixed>> $rows */
+    private function exportXlsx(string $examName, array $rows): void
+    {
+        $filename = sanitize_file_name($examName) . '-results.xlsx';
+        $spreadsheet = $this->exportService->buildSpreadsheet($rows);
+
+        nocache_headers();
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+
+        (new Xlsx($spreadsheet))->save('php://output');
     }
 }

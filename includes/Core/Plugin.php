@@ -74,6 +74,7 @@ use WPCBTPro\Results\DelayedResultsReleaseService;
 use WPCBTPro\Results\ResultRepository;
 use WPCBTPro\Results\ResultsAdminController;
 use WPCBTPro\Results\ResultsExportController;
+use WPCBTPro\Results\ResultsExportService;
 
 final class Plugin
 {
@@ -544,11 +545,17 @@ final class Plugin
         );
 
         $this->container->set(
+            ResultsExportService::class,
+            fn (ServiceContainer $c) => new ResultsExportService(
+                $c->get(ResultRepository::class),
+                $c->get(CandidateRepository::class)
+            )
+        );
+        $this->container->set(
             ResultsExportController::class,
             fn (ServiceContainer $c) => new ResultsExportController(
-                $c->get(ResultRepository::class),
+                $c->get(ResultsExportService::class),
                 $c->get(ExamRepository::class),
-                $c->get(CandidateRepository::class),
                 $c->get(InstitutionContext::class)
             )
         );
