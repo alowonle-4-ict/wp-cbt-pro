@@ -56,6 +56,37 @@ final class CandidateRepository
         return $row ?: null;
     }
 
+    /**
+     * The "does this spreadsheet row already have a candidate?" check shared
+     * by every import that can match into an existing record instead of
+     * creating a duplicate (per-exam roster upload, exam-assignment upload):
+     * registration number first (institution-scoped, since it's only
+     * meaningful within one institution), then email (checked globally, same
+     * as the unique index would enforce).
+     *
+     * @param array{registration_number?:string, email?:string} $input
+     */
+    public function findExistingForImportRow(array $input, int $institutionId): ?array
+    {
+        $registrationNumber = trim((string) ($input['registration_number'] ?? ''));
+        if ($registrationNumber !== '') {
+            $existing = $this->findByRegistrationNumber($institutionId, $registrationNumber);
+            if ($existing !== null) {
+                return $existing;
+            }
+        }
+
+        $email = trim((string) ($input['email'] ?? ''));
+        if ($email !== '') {
+            $existing = $this->findByEmail($email);
+            if ($existing !== null && (int) $existing['institution_id'] === $institutionId) {
+                return $existing;
+            }
+        }
+
+        return null;
+    }
+
     public function findByWpUserId(int $wpUserId): ?array
     {
         global $wpdb;

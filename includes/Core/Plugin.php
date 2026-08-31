@@ -35,6 +35,8 @@ use WPCBTPro\DSA\DsaStateRepository;
 use WPCBTPro\DSA\OperationParser;
 use WPCBTPro\DSA\Registry\StructureRegistry;
 use WPCBTPro\DSA\Registry\StructureServiceProvider;
+use WPCBTPro\Exams\ExamAssignmentAdminController;
+use WPCBTPro\Exams\ExamAssignmentImportService;
 use WPCBTPro\Exams\ExamCandidateRosterRepository;
 use WPCBTPro\Exams\ExamQuestionResolver;
 use WPCBTPro\Exams\ExamRepository;
@@ -314,6 +316,22 @@ final class Plugin
                 $c->get(ExamRepository::class)
             )
         );
+        $this->container->set(
+            ExamAssignmentImportService::class,
+            fn (ServiceContainer $c) => new ExamAssignmentImportService(
+                $c->get(CandidateBulkImportService::class),
+                $c->get(CandidateRepository::class),
+                $c->get(ExamRepository::class),
+                $c->get(ExamCandidateRosterRepository::class)
+            )
+        );
+        $this->container->set(
+            ExamAssignmentAdminController::class,
+            fn (ServiceContainer $c) => new ExamAssignmentAdminController(
+                $c->get(ExamAssignmentImportService::class),
+                $c->get(InstitutionContext::class)
+            )
+        );
 
         $this->container->set(ExecutionSettingsController::class, static fn () => new ExecutionSettingsController());
 
@@ -325,6 +343,7 @@ final class Plugin
                 $c->get(WordImportAdminController::class),
                 $c->get(ExamsAdminController::class),
                 $c->get(ExamRosterAdminController::class),
+                $c->get(ExamAssignmentAdminController::class),
                 $c->get(InvigilatorDashboardController::class),
                 $c->get(VerificationAdminController::class),
                 $c->get(ProgrammingQuestionsAdminController::class),

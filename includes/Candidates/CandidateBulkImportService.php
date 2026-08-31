@@ -28,6 +28,12 @@ final class CandidateBulkImportService
         'class' => ['class', 'level'],
         'registration_number' => ['registration number', 'reg number', 'reg no', 'registration no', 'matric number', 'matric no'],
         'password' => ['password', 'pass'],
+        // Recognized here (so it survives the shared parseFile()/buildPreviewRow()
+        // pipeline every candidate spreadsheet already goes through) but only
+        // acted on by ExamAssignmentImportService — CandidateService ignores
+        // unknown $input keys, so this is a harmless no-op for plain candidate
+        // import and the per-exam roster import, which don't read it.
+        'exam' => ['exam', 'exam name', 'exam code'],
     ];
 
     public function __construct(
@@ -139,6 +145,7 @@ final class CandidateBulkImportService
             'department' => $get('department'),
             'class' => $get('class'),
             'registration_number' => $get('registration_number'),
+            'exam' => $get('exam'),
         ];
         $password = $get('password');
 

@@ -32,7 +32,8 @@ final class ExamRosterImportService
         $rows = $this->candidateImportService->parseFile($filePath, $institutionId);
 
         foreach ($rows as $index => $row) {
-            $existingId = $this->findExisting($row['input'], $institutionId);
+            $existing = $this->candidateRepository->findExistingForImportRow($row['input'], $institutionId);
+            $existingId = $existing !== null ? (int) $existing['id'] : null;
             $rows[$index]['existing_candidate_id'] = $existingId;
 
             if ($existingId !== null) {
@@ -74,25 +75,5 @@ final class ExamRosterImportService
         $this->roster->add($examId, (int) $candidateId);
 
         return ['candidate_id' => (int) $candidateId];
-    }
-
-    /** @param array<string, mixed> $input */
-    private function findExisting(array $input, int $institutionId): ?int
-    {
-        if ($input['registration_number'] !== '') {
-            $existing = $this->candidateRepository->findByRegistrationNumber($institutionId, $input['registration_number']);
-            if ($existing !== null) {
-                return (int) $existing['id'];
-            }
-        }
-
-        if ($input['email'] !== '') {
-            $existing = $this->candidateRepository->findByEmail($input['email']);
-            if ($existing !== null && (int) $existing['institution_id'] === $institutionId) {
-                return (int) $existing['id'];
-            }
-        }
-
-        return null;
     }
 }

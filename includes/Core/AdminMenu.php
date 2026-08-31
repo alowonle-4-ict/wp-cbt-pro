@@ -8,6 +8,7 @@ use WPCBTPro\Camera\VerificationAdminController;
 use WPCBTPro\Candidates\CandidateBulkImportAdminController;
 use WPCBTPro\Candidates\CandidatesAdminController;
 use WPCBTPro\DSA\DsaQuestionsAdminController;
+use WPCBTPro\Exams\ExamAssignmentAdminController;
 use WPCBTPro\Exams\ExamRosterAdminController;
 use WPCBTPro\Exams\ExamsAdminController;
 use WPCBTPro\Import\Word\WordImportAdminController;
@@ -26,6 +27,7 @@ final class AdminMenu
         private readonly WordImportAdminController $wordImportController,
         private readonly ExamsAdminController $examsController,
         private readonly ExamRosterAdminController $examRosterController,
+        private readonly ExamAssignmentAdminController $examAssignmentController,
         private readonly InvigilatorDashboardController $invigilatorController,
         private readonly VerificationAdminController $verificationController,
         private readonly ProgrammingQuestionsAdminController $programmingController,
@@ -51,6 +53,7 @@ final class AdminMenu
         $this->wordImportController->register();
         $this->examsController->register();
         $this->examRosterController->register();
+        $this->examAssignmentController->register();
         $this->verificationController->register();
         $this->programmingController->register();
         $this->dsaController->register();
@@ -109,6 +112,15 @@ final class AdminMenu
             Capabilities::MANAGE_CBT_CANDIDATES,
             'wpcbtpro-import-candidates',
             [$this->candidateBulkImportController, 'render']
+        );
+
+        add_submenu_page(
+            'wpcbtpro-exams',
+            __('Assign Candidates to Exams', 'wp-cbt-pro'),
+            __('Assign to Exam', 'wp-cbt-pro'),
+            Capabilities::MANAGE_CBT_EXAMS,
+            'wpcbtpro-exam-assignment',
+            [$this->examAssignmentController, 'render']
         );
 
         add_submenu_page(
