@@ -120,6 +120,25 @@ $listUrl = add_query_arg(['page' => 'wpcbtpro-exams'], admin_url('admin.php'));
             </tr>
         </table>
 
+        <h2><?php esc_html_e('Candidate Roster', 'wp-cbt-pro'); ?></h2>
+        <table class="form-table" role="presentation">
+            <tr>
+                <th><?php esc_html_e('Restrict to roster', 'wp-cbt-pro'); ?></th>
+                <td>
+                    <label><input type="checkbox" name="restrict_to_roster" value="1" <?php checked($checkedField('restrict_to_roster')); ?>> <?php esc_html_e('Only candidates on this exam\'s uploaded roster may start an attempt.', 'wp-cbt-pro'); ?></label>
+                    <?php if ($action === 'edit'): ?>
+                        <p class="description">
+                            <a href="<?php echo esc_url(add_query_arg(['page' => 'wpcbtpro-exam-roster', 'exam_id' => (int) $exam['id']], admin_url('admin.php'))); ?>">
+                                <?php esc_html_e('Manage this exam\'s roster', 'wp-cbt-pro'); ?>
+                            </a>
+                        </p>
+                    <?php else: ?>
+                        <p class="description"><?php esc_html_e('Save this exam first, then upload a roster from its edit screen.', 'wp-cbt-pro'); ?></p>
+                    <?php endif; ?>
+                </td>
+            </tr>
+        </table>
+
         <h2><?php esc_html_e('Randomization & Grading', 'wp-cbt-pro'); ?></h2>
         <table class="form-table" role="presentation">
             <tr>

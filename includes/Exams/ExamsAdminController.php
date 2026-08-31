@@ -173,6 +173,7 @@ final class ExamsAdminController
             'snapshot_interval_seconds' => $_POST['snapshot_interval_seconds'] ?? '',
             'fullscreen_required' => $_POST['fullscreen_required'] ?? '',
             'result_visibility' => sanitize_key($_POST['result_visibility'] ?? 'immediate'),
+            'restrict_to_roster' => $_POST['restrict_to_roster'] ?? '',
             'status' => sanitize_key($_POST['status'] ?? 'draft'),
         ];
         // phpcs:enable WordPress.Security.ValidatedSanitizedInput

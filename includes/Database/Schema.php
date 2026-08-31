@@ -70,6 +70,7 @@ final class Schema
                 snapshot_interval_seconds INT UNSIGNED NULL,
                 fullscreen_required TINYINT(1) NOT NULL DEFAULT 0,
                 result_visibility VARCHAR(20) NOT NULL DEFAULT 'immediate',
+                restrict_to_roster TINYINT(1) NOT NULL DEFAULT 0,
                 status VARCHAR(20) NOT NULL DEFAULT 'draft',
                 created_at DATETIME NOT NULL,
                 updated_at DATETIME NOT NULL,
@@ -300,6 +301,16 @@ final class Schema
                 updated_at DATETIME NOT NULL,
                 PRIMARY KEY  (id),
                 UNIQUE KEY exam_candidate (exam_id, candidate_id)
+            ) {$charsetCollate};",
+
+            'exam_candidates' => "CREATE TABLE {$p}exam_candidates (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                exam_id BIGINT UNSIGNED NOT NULL,
+                candidate_id BIGINT UNSIGNED NOT NULL,
+                created_at DATETIME NOT NULL,
+                PRIMARY KEY  (id),
+                UNIQUE KEY exam_candidate (exam_id, candidate_id),
+                KEY candidate_id (candidate_id)
             ) {$charsetCollate};",
         ];
     }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace WPCBTPro\Attempts;
 
+use WPCBTPro\Exams\ExamCandidateRosterRepository;
 use WPCBTPro\Exams\ExamQuestionResolver;
 use WPCBTPro\Exams\ExamRepository;
 use WPCBTPro\Exams\RandomizationService;
@@ -31,6 +32,7 @@ final class AttemptService
         private readonly QuestionRepository $questionRepository,
         private readonly QuestionTypeRegistry $registry,
         private readonly CandidateExamOverrideRepository $overrides,
+        private readonly ExamCandidateRosterRepository $roster,
     ) {
     }
 
@@ -55,6 +57,14 @@ final class AttemptService
         $existing = $this->attempts->findActive($examId, $candidateId);
         if ($existing !== null) {
             return $existing;
+        }
+
+        // Only gates a brand-new attempt — a candidate already mid-attempt
+        // (handled above) keeps going even if later dropped from the
+        // roster, matching how the attempt-limit check below only ever
+        // blocks a new attempt, never an in-progress one.
+        if (!empty($exam['restrict_to_roster']) && !$this->roster->isMember($examId, $candidateId)) {
+            throw new \RuntimeException(__('You are not on the candidate list for this exam.', 'wp-cbt-pro'));
         }
 
         $override = $this->overrides->find($examId, $candidateId);

@@ -107,6 +107,7 @@ final class ExamService
             'fullscreen_required' => !empty($input['fullscreen_required']) ? 1 : 0,
             'result_visibility' => in_array($input['result_visibility'] ?? 'immediate', self::RESULT_VISIBILITIES, true)
                 ? $input['result_visibility'] : 'immediate',
+            'restrict_to_roster' => !empty($input['restrict_to_roster']) ? 1 : 0,
             'status' => in_array($input['status'] ?? 'draft', self::STATUSES, true) ? $input['status'] : 'draft',
         ];
     }

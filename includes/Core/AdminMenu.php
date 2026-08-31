@@ -8,6 +8,7 @@ use WPCBTPro\Camera\VerificationAdminController;
 use WPCBTPro\Candidates\CandidateBulkImportAdminController;
 use WPCBTPro\Candidates\CandidatesAdminController;
 use WPCBTPro\DSA\DsaQuestionsAdminController;
+use WPCBTPro\Exams\ExamRosterAdminController;
 use WPCBTPro\Exams\ExamsAdminController;
 use WPCBTPro\Import\Word\WordImportAdminController;
 use WPCBTPro\Monitoring\InvigilatorDashboardController;
@@ -24,6 +25,7 @@ final class AdminMenu
         private readonly CandidateBulkImportAdminController $candidateBulkImportController,
         private readonly WordImportAdminController $wordImportController,
         private readonly ExamsAdminController $examsController,
+        private readonly ExamRosterAdminController $examRosterController,
         private readonly InvigilatorDashboardController $invigilatorController,
         private readonly VerificationAdminController $verificationController,
         private readonly ProgrammingQuestionsAdminController $programmingController,
@@ -48,6 +50,7 @@ final class AdminMenu
         $this->candidateBulkImportController->register();
         $this->wordImportController->register();
         $this->examsController->register();
+        $this->examRosterController->register();
         $this->verificationController->register();
         $this->programmingController->register();
         $this->dsaController->register();
@@ -84,6 +87,19 @@ final class AdminMenu
             Capabilities::MANAGE_CBT_CANDIDATES,
             'wpcbtpro-candidates',
             [$this->candidatesController, 'render']
+        );
+
+        // A null parent registers the page (so admin.php?page=wpcbtpro-exam-roster
+        // is a valid, capability-checked destination) without adding a visible
+        // nav item — this is only ever reached via the "Manage this exam's
+        // roster" link on a specific exam's edit screen, never browsed directly.
+        add_submenu_page(
+            null,
+            __('Exam Roster', 'wp-cbt-pro'),
+            __('Exam Roster', 'wp-cbt-pro'),
+            Capabilities::MANAGE_CBT_EXAMS,
+            'wpcbtpro-exam-roster',
+            [$this->examRosterController, 'render']
         );
 
         add_submenu_page(

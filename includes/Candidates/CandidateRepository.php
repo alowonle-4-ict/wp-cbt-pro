@@ -42,6 +42,20 @@ final class CandidateRepository
         return $row ?: null;
     }
 
+    public function findByRegistrationNumber(int $institutionId, string $registrationNumber): ?array
+    {
+        global $wpdb;
+        $row = $wpdb->get_row(
+            $wpdb->prepare(
+                "SELECT * FROM {$this->table()} WHERE institution_id = %d AND registration_number = %s",
+                $institutionId,
+                $registrationNumber
+            ),
+            ARRAY_A
+        );
+        return $row ?: null;
+    }
+
     public function findByWpUserId(int $wpUserId): ?array
     {
         global $wpdb;

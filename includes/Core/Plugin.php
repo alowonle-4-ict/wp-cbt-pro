@@ -34,8 +34,11 @@ use WPCBTPro\DSA\DsaStateRepository;
 use WPCBTPro\DSA\OperationParser;
 use WPCBTPro\DSA\Registry\StructureRegistry;
 use WPCBTPro\DSA\Registry\StructureServiceProvider;
+use WPCBTPro\Exams\ExamCandidateRosterRepository;
 use WPCBTPro\Exams\ExamQuestionResolver;
 use WPCBTPro\Exams\ExamRepository;
+use WPCBTPro\Exams\ExamRosterAdminController;
+use WPCBTPro\Exams\ExamRosterImportService;
 use WPCBTPro\Exams\ExamService;
 use WPCBTPro\Exams\ExamsAdminController;
 use WPCBTPro\Exams\RandomizationService;
@@ -292,6 +295,24 @@ final class Plugin
             )
         );
 
+        $this->container->set(ExamCandidateRosterRepository::class, static fn () => new ExamCandidateRosterRepository());
+        $this->container->set(
+            ExamRosterImportService::class,
+            fn (ServiceContainer $c) => new ExamRosterImportService(
+                $c->get(CandidateBulkImportService::class),
+                $c->get(CandidateRepository::class),
+                $c->get(ExamCandidateRosterRepository::class)
+            )
+        );
+        $this->container->set(
+            ExamRosterAdminController::class,
+            fn (ServiceContainer $c) => new ExamRosterAdminController(
+                $c->get(ExamRosterImportService::class),
+                $c->get(ExamCandidateRosterRepository::class),
+                $c->get(ExamRepository::class)
+            )
+        );
+
         $this->container->set(ExecutionSettingsController::class, static fn () => new ExecutionSettingsController());
 
         $this->container->set(
@@ -301,6 +322,7 @@ final class Plugin
                 $c->get(CandidateBulkImportAdminController::class),
                 $c->get(WordImportAdminController::class),
                 $c->get(ExamsAdminController::class),
+                $c->get(ExamRosterAdminController::class),
                 $c->get(InvigilatorDashboardController::class),
                 $c->get(VerificationAdminController::class),
                 $c->get(ProgrammingQuestionsAdminController::class),
@@ -363,7 +385,8 @@ final class Plugin
                 $c->get(RandomizationService::class),
                 $c->get(QuestionRepository::class),
                 $c->get(QuestionTypeRegistry::class),
-                $c->get(CandidateExamOverrideRepository::class)
+                $c->get(CandidateExamOverrideRepository::class),
+                $c->get(ExamCandidateRosterRepository::class)
             )
         );
 
