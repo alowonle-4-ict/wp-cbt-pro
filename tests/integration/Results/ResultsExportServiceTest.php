@@ -57,6 +57,9 @@ final class ResultsExportServiceTest extends \WP_UnitTestCase
             'candidate_ref' => 'CBT-EXPORT-' . wp_generate_password(6, false, false),
             'first_name' => 'Export',
             'last_name' => 'Candidate',
+            'registration_number' => 'EXPORT-REG-001',
+            'department' => 'Computer Science',
+            'class' => '300L',
             'status' => 'active',
         ]);
 
@@ -100,11 +103,14 @@ final class ResultsExportServiceTest extends \WP_UnitTestCase
 
         self::assertCount(1, $rows);
         self::assertSame('Export Candidate', $rows[0][0]);
-        self::assertSame(1.0, (float) $rows[0][2]);
-        self::assertSame(100.0, (float) $rows[0][3]);
-        self::assertSame('A', $rows[0][4]);
-        self::assertSame('pass', $rows[0][5]);
-        self::assertSame('No', $rows[0][13], 'Not yet released.');
+        self::assertSame('EXPORT-REG-001', $rows[0][1]);
+        self::assertSame('Computer Science', $rows[0][2]);
+        self::assertSame('300L', $rows[0][3]);
+        self::assertSame(1.0, (float) $rows[0][5]);
+        self::assertSame(100.0, (float) $rows[0][6]);
+        self::assertSame('A', $rows[0][7]);
+        self::assertSame('pass', $rows[0][8]);
+        self::assertSame('No', $rows[0][16], 'Not yet released.');
     }
 
     public function testBuildSpreadsheetProducesARealXlsxFileAReaderCanOpen(): void

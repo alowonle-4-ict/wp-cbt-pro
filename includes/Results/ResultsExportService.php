@@ -16,9 +16,9 @@ use WPCBTPro\Candidates\CandidateRepository;
 final class ResultsExportService
 {
     public const COLUMNS = [
-        'Candidate Name', 'Candidate ID', 'Score', 'Percentage', 'Grade',
-        'Pass/Fail', 'Correct', 'Incorrect', 'Unanswered', 'Pending Review',
-        'Status', 'Time Used (s)', 'Submitted At', 'Released',
+        'Candidate Name', 'Registration Number', 'Department', 'Level', 'Candidate ID',
+        'Score', 'Percentage', 'Grade', 'Pass/Fail', 'Correct', 'Incorrect',
+        'Unanswered', 'Pending Review', 'Status', 'Time Used (s)', 'Submitted At', 'Released',
     ];
 
     public function __construct(
@@ -42,6 +42,9 @@ final class ResultsExportService
 
             $rows[] = [
                 trim($candidate['first_name'] . ' ' . $candidate['last_name']),
+                $candidate['registration_number'] ?? '',
+                $candidate['department'] ?? '',
+                $candidate['class'] ?? '',
                 $candidate['candidate_ref'],
                 $result['score'],
                 $result['percentage'],
