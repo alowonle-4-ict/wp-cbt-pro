@@ -5,6 +5,13 @@
     color: #1a1f29;
 }
 
+/* The exam name heading (start, paused, submitted screens) — not
+   .wpcbtpro-exam__title, which sits in the in-progress header's flex bar
+   next to the timer and needs to stay left-aligned there. */
+.wpcbtpro-exam > h2 {
+    text-align: center;
+}
+
 .wpcbtpro-notice {
     padding: 12px 16px;
     border-radius: 4px;
