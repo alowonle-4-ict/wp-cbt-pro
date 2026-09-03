@@ -16,6 +16,21 @@ body.wpcbtpro-fullscreen {
     box-shadow: 0 1px 4px rgba(26, 31, 41, 0.08);
 }
 
+/* Faint, tiled candidate-name/ID/timestamp overlay. Screenshots can't be
+   blocked by any browser or OS technology, so this doesn't try to — it
+   makes a leaked screenshot traceable back to who took it and when.
+   pointer-events: none keeps it from intercepting clicks on real controls. */
+.wpcbtpro-watermark {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    pointer-events: none;
+    background-repeat: repeat;
+    z-index: 9999;
+}
+
 /* This card is meant to look the same regardless of the site's active
    theme — it renders through the bare full-screen template (no theme
    header/footer), but wp_head() still loads the theme's own stylesheet,

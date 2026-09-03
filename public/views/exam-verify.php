@@ -11,6 +11,10 @@ if (!defined('ABSPATH')) {
 $photoId = (int) ($candidate['photo_attachment_id'] ?? 0);
 ?>
 <div class="wpcbtpro-exam wpcbtpro-exam--verify" data-wpcbtpro-verify data-attempt-id="<?php echo esc_attr((string) $attempt['id']); ?>">
+    <?php
+    // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- ExamWatermark::render() escapes its dynamic content internally (esc_attr() on the built style attribute).
+    echo \WPCBTPro\Attempts\ExamWatermark::render($candidate);
+    ?>
     <h2><?php esc_html_e('Identity Verification', 'wp-cbt-pro'); ?></h2>
     <p><?php esc_html_e('Position your face in the frame below and capture a photo to confirm your identity before starting.', 'wp-cbt-pro'); ?></p>
 

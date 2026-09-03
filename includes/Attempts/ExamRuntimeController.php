@@ -156,7 +156,7 @@ final class ExamRuntimeController
         }
 
         if ($attempt['status'] !== 'in_progress') {
-            $this->renderSubmitted($exam, $attempt);
+            $this->renderSubmitted($exam, $candidate, $attempt);
             return;
         }
 
@@ -169,7 +169,7 @@ final class ExamRuntimeController
             check_admin_referer('wpcbtpro_submit_exam_' . $attempt['id'], 'wpcbtpro_submit_exam_nonce');
             $this->attemptService->submitAttempt($exam, $attempt);
             $attempt = $this->attemptRepository->find((int) $attempt['id']);
-            $this->renderSubmitted($exam, $attempt);
+            $this->renderSubmitted($exam, $candidate, $attempt);
             return;
         }
 
@@ -269,7 +269,7 @@ final class ExamRuntimeController
         include WPCBTPRO_PATH . 'public/views/exam-question.php';
     }
 
-    private function renderSubmitted(array $exam, array $attempt): void
+    private function renderSubmitted(array $exam, array $candidate, array $attempt): void
     {
         $result = $this->resultRepository->findByAttempt((int) $attempt['id']);
         include WPCBTPRO_PATH . 'public/views/exam-submitted.php';

@@ -1,6 +1,7 @@
 <?php
 /**
  * @var array<string,mixed> $exam
+ * @var array<string,mixed> $candidate
  * @var array<string,mixed> $attempt
  * @var array<string,mixed>|null $result
  */
@@ -9,6 +10,10 @@ if (!defined('ABSPATH')) {
 }
 ?>
 <div class="wpcbtpro-exam wpcbtpro-exam--submitted">
+    <?php
+    // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- ExamWatermark::render() escapes its dynamic content internally (esc_attr() on the built style attribute).
+    echo \WPCBTPro\Attempts\ExamWatermark::render($candidate);
+    ?>
     <h2><?php echo esc_html($exam['name']); ?></h2>
     <p class="wpcbtpro-notice wpcbtpro-notice--success"><?php esc_html_e('Your exam has been submitted.', 'wp-cbt-pro'); ?></p>
 

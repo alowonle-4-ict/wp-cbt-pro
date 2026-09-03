@@ -10,6 +10,10 @@ if (!defined('ABSPATH')) {
 ?>
 <meta http-equiv="refresh" content="15">
 <div class="wpcbtpro-exam wpcbtpro-exam--paused">
+    <?php
+    // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- ExamWatermark::render() escapes its dynamic content internally (esc_attr() on the built style attribute).
+    echo \WPCBTPro\Attempts\ExamWatermark::render($candidate);
+    ?>
     <h2><?php echo esc_html($exam['name']); ?></h2>
     <div class="wpcbtpro-notice">
         <?php esc_html_e('Your exam has been paused by your invigilator. Please wait — this page will refresh automatically, or you can reload it yourself once you\'re told to continue.', 'wp-cbt-pro'); ?>

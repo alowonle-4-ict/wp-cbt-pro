@@ -7,6 +7,12 @@
 (function () {
     'use strict';
 
+    document.addEventListener('contextmenu', function (e) {
+        if (e.target.closest('.wpcbtpro-exam')) {
+            e.preventDefault();
+        }
+    });
+
     if (typeof wpcbtproExam === 'undefined') {
         return;
     }

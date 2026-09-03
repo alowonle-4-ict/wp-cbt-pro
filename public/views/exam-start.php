@@ -17,6 +17,10 @@ $needsSystemCheck = $needsCamera || !empty($exam['identity_verification']);
 $isSecure = is_ssl() || in_array(wp_parse_url(home_url(), PHP_URL_HOST), ['localhost', '127.0.0.1'], true);
 ?>
 <div class="wpcbtpro-exam wpcbtpro-exam--start">
+    <?php
+    // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- ExamWatermark::render() escapes its dynamic content internally (esc_attr() on the built style attribute).
+    echo \WPCBTPro\Attempts\ExamWatermark::render($candidate);
+    ?>
     <div class="wpcbtpro-candidate-card">
         <?php if ($photoId): ?>
             <?php echo wp_get_attachment_image($photoId, [112, 112], false, ['class' => 'wpcbtpro-candidate-card__photo']); ?>
@@ -111,5 +115,8 @@ $isSecure = is_ssl() || in_array(wp_parse_url(home_url(), PHP_URL_HOST), ['local
         </form>
     <?php else: ?>
         <p class="wpcbtpro-notice"><?php esc_html_e('You have no attempts remaining for this exam.', 'wp-cbt-pro'); ?></p>
+        <p class="wpcbtpro-submitted__logout">
+            <a href="<?php echo esc_url(wp_logout_url(\WPCBTPro\Candidates\CandidateLoginController::loginUrl(''))); ?>" class="wpcbtpro-btn"><?php esc_html_e('Log out', 'wp-cbt-pro'); ?></a>
+        </p>
     <?php endif; ?>
 </div>

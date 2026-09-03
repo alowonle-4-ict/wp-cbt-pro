@@ -37,6 +37,10 @@ $autoMonitoringEnabled = !empty($exam['auto_monitoring_enabled']) && $photoId > 
      data-attempt-id="<?php echo esc_attr((string) $attempt['id']); ?>"
      data-server-now="<?php echo esc_attr((string) $serverNow); ?>"
      data-server-end="<?php echo esc_attr((string) $serverEnd); ?>">
+    <?php
+    // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- ExamWatermark::render() escapes its dynamic content internally (esc_attr() on the built style attribute).
+    echo \WPCBTPro\Attempts\ExamWatermark::render($candidate);
+    ?>
 
     <header class="wpcbtpro-exam__header">
         <div class="wpcbtpro-candidate-card">
