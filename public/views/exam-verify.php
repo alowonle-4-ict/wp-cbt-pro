@@ -17,7 +17,7 @@ $photoId = (int) ($candidate['photo_attachment_id'] ?? 0);
     <?php if ($photoId): ?>
         <div class="wpcbtpro-verify__reference">
             <span class="wpcbtpro-verify__reference-label"><?php esc_html_e('On file', 'wp-cbt-pro'); ?></span>
-            <?php echo wp_get_attachment_image($photoId, [96, 96], false, ['class' => 'wpcbtpro-candidate-card__photo']); ?>
+            <?php echo wp_get_attachment_image($photoId, [112, 112], false, ['class' => 'wpcbtpro-candidate-card__photo']); ?>
         </div>
     <?php endif; ?>
 

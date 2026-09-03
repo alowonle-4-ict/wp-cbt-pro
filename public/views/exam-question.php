@@ -38,9 +38,9 @@ $cameraRequired = !empty($exam['camera_required']);
     <header class="wpcbtpro-exam__header">
         <div class="wpcbtpro-candidate-card">
             <?php if ($photoId): ?>
-                <?php echo wp_get_attachment_image($photoId, [48, 48], false, ['class' => 'wpcbtpro-candidate-card__photo']); ?>
+                <?php echo wp_get_attachment_image($photoId, [48, 48], false, ['class' => 'wpcbtpro-candidate-card__photo wpcbtpro-candidate-card__photo--small']); ?>
             <?php else: ?>
-                <span class="wpcbtpro-candidate-card__photo wpcbtpro-candidate-card__photo--empty" aria-hidden="true"></span>
+                <span class="wpcbtpro-candidate-card__photo wpcbtpro-candidate-card__photo--empty wpcbtpro-candidate-card__photo--small" aria-hidden="true"></span>
             <?php endif; ?>
             <div>
                 <strong><?php echo esc_html(trim($candidate['first_name'] . ' ' . $candidate['last_name'])); ?></strong>

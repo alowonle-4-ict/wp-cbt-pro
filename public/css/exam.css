@@ -47,15 +47,24 @@ body.wpcbtpro-fullscreen {
 }
 
 .wpcbtpro-candidate-card__photo {
-    border-radius: 4px;
+    width: 112px;
+    height: 112px;
+    border-radius: 6px;
     object-fit: cover;
 }
 
 .wpcbtpro-candidate-card__photo--empty {
     display: inline-block;
+    background: #e3e9f1;
+}
+
+/* The persistent header badge shown throughout an in-progress exam
+   (exam-question.php) stays small deliberately, so it doesn't compete with
+   the question itself — everywhere else (start, identity verification) uses
+   the larger default above. */
+.wpcbtpro-candidate-card__photo--small {
     width: 48px;
     height: 48px;
-    background: #e3e9f1;
     border-radius: 4px;
 }
 
@@ -442,7 +451,7 @@ body.wpcbtpro-fullscreen {
 
 .wpcbtpro-camera-preview {
     width: 100%;
-    max-width: 320px;
+    max-width: 480px;
     border-radius: 6px;
     background: #11151c;
     display: block;

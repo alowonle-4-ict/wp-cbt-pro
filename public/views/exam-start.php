@@ -19,7 +19,7 @@ $isSecure = is_ssl() || in_array(wp_parse_url(home_url(), PHP_URL_HOST), ['local
 <div class="wpcbtpro-exam wpcbtpro-exam--start">
     <div class="wpcbtpro-candidate-card">
         <?php if ($photoId): ?>
-            <?php echo wp_get_attachment_image($photoId, [72, 72], false, ['class' => 'wpcbtpro-candidate-card__photo']); ?>
+            <?php echo wp_get_attachment_image($photoId, [112, 112], false, ['class' => 'wpcbtpro-candidate-card__photo']); ?>
         <?php else: ?>
             <span class="wpcbtpro-candidate-card__photo wpcbtpro-candidate-card__photo--empty" aria-hidden="true"></span>
         <?php endif; ?>
