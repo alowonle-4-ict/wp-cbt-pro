@@ -42,9 +42,7 @@ final class CandidateService
     public function create(array $input): int
     {
         $institutionId = (int) $input['institution_id'];
-        $ref = trim($input['candidate_ref'] ?? '') !== ''
-            ? $input['candidate_ref']
-            : $this->refGenerator->generate($institutionId);
+        $ref = $this->resolveCandidateRef($institutionId, $input);
 
         $id = $this->repository->insert([
             'institution_id' => $institutionId,
@@ -64,6 +62,28 @@ final class CandidateService
         AuditLogger::record('candidate.created', 'candidate', $id, ['candidate_ref' => $ref]);
 
         return $id;
+    }
+
+    /**
+     * The candidate's own registration number doubles as their Candidate ID
+     * (candidate_ref) whenever one was given and isn't already taken by
+     * another candidate — candidate_ref has a UNIQUE key, so a collision
+     * (or no registration number at all) falls back to the auto-generated
+     * CBT-YYYY-NNNNN format rather than ever failing the insert.
+     */
+    private function resolveCandidateRef(int $institutionId, array $input): string
+    {
+        $explicitRef = trim($input['candidate_ref'] ?? '');
+        if ($explicitRef !== '') {
+            return $explicitRef;
+        }
+
+        $registrationNumber = trim($input['registration_number'] ?? '');
+        if ($registrationNumber !== '' && $this->repository->findByRef($registrationNumber) === null) {
+            return $registrationNumber;
+        }
+
+        return $this->refGenerator->generate($institutionId);
     }
 
     public function update(int $id, array $input): void

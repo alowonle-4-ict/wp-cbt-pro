@@ -48,4 +48,8 @@ if (!defined('ABSPATH')) {
     <?php else: ?>
         <p class="wpcbtpro-notice"><?php esc_html_e('Your result will be released by your institution.', 'wp-cbt-pro'); ?></p>
     <?php endif; ?>
+
+    <p class="wpcbtpro-submitted__logout">
+        <a href="<?php echo esc_url(wp_logout_url(home_url('/'))); ?>" class="wpcbtpro-btn"><?php esc_html_e('Log out', 'wp-cbt-pro'); ?></a>
+    </p>
 </div>

@@ -67,87 +67,98 @@ $autoMonitoringEnabled = !empty($exam['auto_monitoring_enabled']) && $photoId > 
         <div class="wpcbtpro-notice wpcbtpro-notice--error wpcbtpro-hidden" data-wpcbtpro-monitoring-warning role="alert" aria-live="assertive"></div>
     <?php endif; ?>
 
-    <nav class="wpcbtpro-palette" aria-label="<?php esc_attr_e('Question palette', 'wp-cbt-pro'); ?>">
-        <?php foreach ($resolvedIds as $i => $qid):
-            $ans = $answers[$qid] ?? null;
-            $isAnswered = $ans !== null && trim((string) $ans['value']) !== '';
-            $isMarked = !empty($ans['marked_for_review']);
-            $stateClass = $isMarked ? 'is-marked' : ($isAnswered ? 'is-answered' : 'is-unanswered');
-            $url = add_query_arg(['q' => $i]);
-        ?>
-            <a href="<?php echo esc_url($url); ?>"
-               class="wpcbtpro-palette__item <?php echo esc_attr($stateClass); ?> <?php echo $i === $index ? 'is-current' : ''; ?>">
-                <?php echo esc_html((string) ($i + 1)); ?>
-            </a>
-        <?php endforeach; ?>
-    </nav>
+    <div class="wpcbtpro-exam__body">
+        <div class="wpcbtpro-exam__main">
+            <?php if ($error !== null): ?>
+                <div class="wpcbtpro-notice wpcbtpro-notice--error"><?php echo esc_html($error); ?></div>
+            <?php endif; ?>
 
-    <?php if ($error !== null): ?>
-        <div class="wpcbtpro-notice wpcbtpro-notice--error"><?php echo esc_html($error); ?></div>
-    <?php endif; ?>
+            <?php if ($question === null || $type === null): ?>
+                <p class="wpcbtpro-notice wpcbtpro-notice--error"><?php esc_html_e('This question could not be loaded.', 'wp-cbt-pro'); ?></p>
+            <?php else: ?>
+                <form method="post" class="wpcbtpro-question-form" data-wpcbtpro-autosave>
+                    <?php wp_nonce_field('wpcbtpro_save_answer_' . $attempt['id'], 'wpcbtpro_answer_nonce'); ?>
+                    <input type="hidden" name="question_id" value="<?php echo esc_attr((string) $question['id']); ?>">
+                    <input type="hidden" name="wpcbtpro_nav" value="" data-wpcbtpro-nav-field>
 
-    <?php if ($question === null || $type === null): ?>
-        <p class="wpcbtpro-notice wpcbtpro-notice--error"><?php esc_html_e('This question could not be loaded.', 'wp-cbt-pro'); ?></p>
-    <?php else: ?>
-        <form method="post" class="wpcbtpro-question-form" data-wpcbtpro-autosave>
-            <?php wp_nonce_field('wpcbtpro_save_answer_' . $attempt['id'], 'wpcbtpro_answer_nonce'); ?>
-            <input type="hidden" name="question_id" value="<?php echo esc_attr((string) $question['id']); ?>">
-            <input type="hidden" name="wpcbtpro_nav" value="" data-wpcbtpro-nav-field>
+                    <div class="wpcbtpro-question">
+                        <div class="wpcbtpro-question__meta">
+                            <?php echo esc_html(sprintf(
+                                /* translators: 1: current question number, 2: total questions */
+                                __('Question %1$d of %2$d', 'wp-cbt-pro'),
+                                $index + 1,
+                                $total
+                            )); ?>
+                            &middot;
+                            <?php echo esc_html(sprintf(
+                                /* translators: %s: marks available for this question */
+                                __('%s marks', 'wp-cbt-pro'),
+                                rtrim(rtrim(number_format((float) $question['marks'], 2), '0'), '.')
+                            )); ?>
+                        </div>
 
-            <div class="wpcbtpro-question">
-                <div class="wpcbtpro-question__meta">
-                    <?php echo esc_html(sprintf(
-                        /* translators: 1: current question number, 2: total questions */
-                        __('Question %1$d of %2$d', 'wp-cbt-pro'),
-                        $index + 1,
-                        $total
-                    )); ?>
-                    &middot;
-                    <?php echo esc_html(sprintf(
-                        /* translators: %s: marks available for this question */
-                        __('%s marks', 'wp-cbt-pro'),
-                        rtrim(rtrim(number_format((float) $question['marks'], 2), '0'), '.')
-                    )); ?>
-                </div>
+                        <div class="wpcbtpro-question__prompt">
+                            <?php
+                            // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- renderPrompt() runs the content through wp_kses() (see RendersHtmlContent).
+                            echo $type->renderer()->renderPrompt($question);
+                            ?>
+                        </div>
 
-                <div class="wpcbtpro-question__prompt">
-                    <?php
-                    // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- renderPrompt() runs the content through wp_kses() (see RendersHtmlContent).
-                    echo $type->renderer()->renderPrompt($question);
-                    ?>
-                </div>
+                        <div class="wpcbtpro-question__answer">
+                            <?php $type->candidateUi()->render($question, $currentAnswer); ?>
+                        </div>
 
-                <div class="wpcbtpro-question__answer">
-                    <?php $type->candidateUi()->render($question, $currentAnswer); ?>
-                </div>
+                        <label class="wpcbtpro-mark-review">
+                            <input type="checkbox" name="wpcbtpro_marked_for_review" value="1" <?php checked($markedForReview); ?>>
+                            <?php esc_html_e('Mark for review', 'wp-cbt-pro'); ?>
+                        </label>
+                        <span class="wpcbtpro-save-status" data-wpcbtpro-save-status aria-live="polite"></span>
+                    </div>
 
-                <label class="wpcbtpro-mark-review">
-                    <input type="checkbox" name="wpcbtpro_marked_for_review" value="1" <?php checked($markedForReview); ?>>
-                    <?php esc_html_e('Mark for review', 'wp-cbt-pro'); ?>
-                </label>
-                <span class="wpcbtpro-save-status" data-wpcbtpro-save-status aria-live="polite"></span>
-            </div>
+                    <div class="wpcbtpro-question__nav">
+                        <button type="submit" name="wpcbtpro_nav" value="prev" class="wpcbtpro-btn" <?php disabled($index === 0); ?>>
+                            <?php esc_html_e('Previous', 'wp-cbt-pro'); ?>
+                        </button>
+                        <button type="submit" name="wpcbtpro_nav" value="clear" class="wpcbtpro-btn wpcbtpro-btn--ghost">
+                            <?php esc_html_e('Clear Answer', 'wp-cbt-pro'); ?>
+                        </button>
+                        <button type="submit" name="wpcbtpro_nav" value="save" class="wpcbtpro-btn">
+                            <?php esc_html_e('Save', 'wp-cbt-pro'); ?>
+                        </button>
+                        <button type="submit" name="wpcbtpro_nav" value="next" class="wpcbtpro-btn wpcbtpro-btn--primary" <?php disabled($index === $total - 1); ?>>
+                            <?php esc_html_e('Save & Next', 'wp-cbt-pro'); ?>
+                        </button>
+                    </div>
+                </form>
+            <?php endif; ?>
 
-            <div class="wpcbtpro-question__nav">
-                <button type="submit" name="wpcbtpro_nav" value="prev" class="wpcbtpro-btn" <?php disabled($index === 0); ?>>
-                    <?php esc_html_e('Previous', 'wp-cbt-pro'); ?>
-                </button>
-                <button type="submit" name="wpcbtpro_nav" value="clear" class="wpcbtpro-btn wpcbtpro-btn--ghost">
-                    <?php esc_html_e('Clear Answer', 'wp-cbt-pro'); ?>
-                </button>
-                <button type="submit" name="wpcbtpro_nav" value="save" class="wpcbtpro-btn">
-                    <?php esc_html_e('Save', 'wp-cbt-pro'); ?>
-                </button>
-                <button type="submit" name="wpcbtpro_nav" value="next" class="wpcbtpro-btn wpcbtpro-btn--primary" <?php disabled($index === $total - 1); ?>>
-                    <?php esc_html_e('Save & Next', 'wp-cbt-pro'); ?>
-                </button>
-            </div>
-        </form>
-    <?php endif; ?>
+            <form method="post" class="wpcbtpro-submit-form"
+                  onsubmit="return confirm('<?php echo esc_js(__('Submit the exam now? You will not be able to change your answers afterward.', 'wp-cbt-pro')); ?>');">
+                <?php wp_nonce_field('wpcbtpro_submit_exam_' . $attempt['id'], 'wpcbtpro_submit_exam_nonce'); ?>
+                <button type="submit" class="wpcbtpro-btn wpcbtpro-btn--danger"><?php esc_html_e('Submit Exam', 'wp-cbt-pro'); ?></button>
+            </form>
+        </div>
 
-    <form method="post" class="wpcbtpro-submit-form"
-          onsubmit="return confirm('<?php echo esc_js(__('Submit the exam now? You will not be able to change your answers afterward.', 'wp-cbt-pro')); ?>');">
-        <?php wp_nonce_field('wpcbtpro_submit_exam_' . $attempt['id'], 'wpcbtpro_submit_exam_nonce'); ?>
-        <button type="submit" class="wpcbtpro-btn wpcbtpro-btn--danger"><?php esc_html_e('Submit Exam', 'wp-cbt-pro'); ?></button>
-    </form>
+        <aside class="wpcbtpro-exam__sidebar">
+            <h3><?php echo esc_html(sprintf(
+                /* translators: %d: total number of questions in the exam */
+                __('Questions (%d)', 'wp-cbt-pro'),
+                $total
+            )); ?></h3>
+            <nav class="wpcbtpro-palette" aria-label="<?php esc_attr_e('Question palette', 'wp-cbt-pro'); ?>">
+                <?php foreach ($resolvedIds as $i => $qid):
+                    $ans = $answers[$qid] ?? null;
+                    $isAnswered = $ans !== null && trim((string) $ans['value']) !== '';
+                    $isMarked = !empty($ans['marked_for_review']);
+                    $stateClass = $isMarked ? 'is-marked' : ($isAnswered ? 'is-answered' : 'is-unanswered');
+                    $url = add_query_arg(['q' => $i]);
+                ?>
+                    <a href="<?php echo esc_url($url); ?>"
+                       class="wpcbtpro-palette__item <?php echo esc_attr($stateClass); ?> <?php echo $i === $index ? 'is-current' : ''; ?>">
+                        <?php echo esc_html((string) ($i + 1)); ?>
+                    </a>
+                <?php endforeach; ?>
+            </nav>
+        </aside>
+    </div>
 </div>

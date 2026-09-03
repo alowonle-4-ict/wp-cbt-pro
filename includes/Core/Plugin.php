@@ -463,7 +463,8 @@ final class Plugin
                 $c->get(CameraSessionRepository::class),
                 $c->get(VerificationRepository::class),
                 $c->get(MonitoringEventRepository::class),
-                $c->get(Base64ImageUploader::class)
+                $c->get(Base64ImageUploader::class),
+                $c->get(CandidateRepository::class)
             )
         );
 

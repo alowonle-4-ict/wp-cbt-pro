@@ -14,6 +14,7 @@ use WPCBTPro\Camera\Contracts\SnapshotResult;
 use WPCBTPro\Camera\Contracts\VerificationResult;
 use WPCBTPro\Camera\Contracts\VerificationStatus;
 use WPCBTPro\Camera\VerificationRepository;
+use WPCBTPro\Candidates\CandidateRepository;
 use WPCBTPro\Monitoring\MonitoringEventRepository;
 
 final class DefaultCameraVerificationService implements CameraVerificationService
@@ -23,6 +24,7 @@ final class DefaultCameraVerificationService implements CameraVerificationServic
         private readonly VerificationRepository $verifications,
         private readonly MonitoringEventRepository $events,
         private readonly Base64ImageUploader $imageUploader,
+        private readonly CandidateRepository $candidates,
     ) {
     }
 
@@ -89,6 +91,16 @@ final class DefaultCameraVerificationService implements CameraVerificationServic
         // instead of this default ever guessing VERIFIED or FAILED.
         $status = VerificationStatus::ReviewRequired;
         $this->verifications->insert($session->attemptId, $status->value, $attachmentId);
+
+        // Only ever fills in a *missing* profile photo — never overwrites an
+        // existing one. A candidate's photo is the fixed reference every
+        // future automated monitoring check (AutoMonitoringService)
+        // compares live frames against; letting a later capture silently
+        // replace it would let whoever is in front of the camera at
+        // verification time become their own "correct" answer.
+        if (empty($candidate['photo_attachment_id'])) {
+            $this->candidates->update((int) $candidate['id'], ['photo_attachment_id' => $attachmentId]);
+        }
 
         return new VerificationResult($status, $attachmentId);
     }
