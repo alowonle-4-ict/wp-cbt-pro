@@ -68,6 +68,7 @@ final class Schema
                 microphone_mode VARCHAR(20) NOT NULL DEFAULT 'off',
                 identity_verification TINYINT(1) NOT NULL DEFAULT 0,
                 snapshot_interval_seconds INT UNSIGNED NULL,
+                auto_monitoring_enabled TINYINT(1) NOT NULL DEFAULT 0,
                 fullscreen_required TINYINT(1) NOT NULL DEFAULT 0,
                 result_visibility VARCHAR(20) NOT NULL DEFAULT 'immediate',
                 restrict_to_roster TINYINT(1) NOT NULL DEFAULT 0,

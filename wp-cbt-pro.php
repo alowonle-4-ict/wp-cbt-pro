@@ -20,7 +20,7 @@ if (!defined('ABSPATH')) {
 }
 
 define('WPCBTPRO_VERSION', '0.5.0');
-define('WPCBTPRO_DB_VERSION', '1.5.0');
+define('WPCBTPRO_DB_VERSION', '1.6.0');
 define('WPCBTPRO_FILE', __FILE__);
 define('WPCBTPRO_PATH', plugin_dir_path(__FILE__));
 define('WPCBTPRO_URL', plugin_dir_url(__FILE__));

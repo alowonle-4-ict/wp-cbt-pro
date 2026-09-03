@@ -171,6 +171,7 @@ final class ExamsAdminController
             'microphone_mode' => sanitize_key($_POST['microphone_mode'] ?? 'off'),
             'identity_verification' => $_POST['identity_verification'] ?? '',
             'snapshot_interval_seconds' => $_POST['snapshot_interval_seconds'] ?? '',
+            'auto_monitoring_enabled' => $_POST['auto_monitoring_enabled'] ?? '',
             'fullscreen_required' => $_POST['fullscreen_required'] ?? '',
             'result_visibility' => sanitize_key($_POST['result_visibility'] ?? 'immediate'),
             'restrict_to_roster' => $_POST['restrict_to_roster'] ?? '',

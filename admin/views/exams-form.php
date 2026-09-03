@@ -179,7 +179,16 @@ $listUrl = add_query_arg(['page' => 'wpcbtpro-exams'], admin_url('admin.php'));
                 <th><label for="snapshot_interval_seconds"><?php esc_html_e('Snapshot interval (seconds)', 'wp-cbt-pro'); ?></label></th>
                 <td>
                     <input type="number" min="0" id="snapshot_interval_seconds" name="snapshot_interval_seconds" value="<?php echo $field('snapshot_interval_seconds'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- $field() escapes via esc_attr(), see top of file ?>">
-                    <p class="description"><?php esc_html_e('Leave blank to disable periodic snapshots.', 'wp-cbt-pro'); ?></p>
+                    <p class="description"><?php esc_html_e('Leave blank to disable periodic snapshots. Also sets how often automated monitoring (below) re-checks the candidate.', 'wp-cbt-pro'); ?></p>
+                </td>
+            </tr>
+            <tr>
+                <th><?php esc_html_e('Automated monitoring', 'wp-cbt-pro'); ?></th>
+                <td>
+                    <label><input type="checkbox" name="auto_monitoring_enabled" value="1" <?php checked($checkedField('auto_monitoring_enabled')); ?>> <?php esc_html_e('Automatically submit the exam after 3 warnings.', 'wp-cbt-pro'); ?></label>
+                    <p class="description">
+                        <?php esc_html_e('At each snapshot interval, the candidate\'s browser compares the live camera image to their registered photo (entirely in-browser — no third-party service). A mismatch, no face visible (camera covered, blocked, or the candidate out of frame), or a lost camera connection each count as one warning. On the 3rd, the exam is submitted automatically. Requires Camera required, Identity verification, a registered candidate photo, and a snapshot interval above.', 'wp-cbt-pro'); ?>
+                    </p>
                 </td>
             </tr>
             <tr>

@@ -10,6 +10,8 @@ use WPCBTPro\Camera\Contracts\CameraEventType;
 use WPCBTPro\Camera\Contracts\CameraVerificationService;
 use WPCBTPro\Candidates\CandidateRepository;
 use WPCBTPro\Candidates\CurrentCandidateResolver;
+use WPCBTPro\Monitoring\AutoMonitoringService;
+use WPCBTPro\Monitoring\Contracts\MonitoringViolationType;
 use WPCBTPro\REST\RestController;
 use WPCBTPro\REST\RestServiceProvider;
 
@@ -21,6 +23,7 @@ final class CameraRestController implements RestController
         private readonly AttemptOwnershipGuard $guard,
         private readonly CurrentCandidateResolver $candidateResolver,
         private readonly CandidateRepository $candidateRepository,
+        private readonly AutoMonitoringService $autoMonitoring,
     ) {
     }
 
@@ -48,6 +51,13 @@ final class CameraRestController implements RestController
             'permission_callback' => [$this, 'requireCandidate'],
             'args' => ['attempt_id' => ['required' => true, 'type' => 'integer']],
         ]);
+
+        register_rest_route($ns, '/monitoring-violation', [
+            'methods' => 'POST',
+            'callback' => [$this, 'handleMonitoringViolation'],
+            'permission_callback' => [$this, 'requireCandidate'],
+            'args' => ['attempt_id' => ['required' => true, 'type' => 'integer']],
+        ]);
     }
 
     public function requireCandidate(): bool
@@ -71,9 +81,12 @@ final class CameraRestController implements RestController
         $session = $this->cameraService->startSession((int) $attempt['id']);
         $session = $this->cameraService->recordEvent($session, $type, $context);
 
-        $this->applyDisconnectPolicy($type, $exam, $attempt);
+        $monitoring = $this->applyDisconnectPolicy($type, $exam, $attempt);
 
-        return new \WP_REST_Response(['recorded' => true, 'session_state' => $session->state->value]);
+        return new \WP_REST_Response(array_merge(
+            ['recorded' => true, 'session_state' => $session->state->value],
+            $monitoring !== null ? ['monitoring' => $monitoring] : []
+        ));
     }
 
     public function handleSnapshot(\WP_REST_Request $request): \WP_REST_Response|\WP_Error
@@ -117,19 +130,58 @@ final class CameraRestController implements RestController
         return new \WP_REST_Response(['status' => $result->status->value]);
     }
 
-    private function applyDisconnectPolicy(CameraEventType $type, array $exam, array $attempt): void
+    /**
+     * The candidate's own browser reports a face mismatch or "no face
+     * visible" here after comparing a live frame to their reference photo
+     * client-side — this endpoint only logs it and evaluates the shared
+     * strike count (AutoMonitoringService), it never trusts the browser's
+     * verdict about anything beyond "a check ran and this is what it saw."
+     */
+    public function handleMonitoringViolation(\WP_REST_Request $request): \WP_REST_Response|\WP_Error
+    {
+        [$exam, $attempt, $error] = $this->guard->resolve((int) $request->get_param('attempt_id'));
+        if ($error !== null) {
+            return $error;
+        }
+
+        if (empty($exam['auto_monitoring_enabled'])) {
+            return new \WP_Error('wpcbtpro_monitoring_disabled', __('Automated monitoring is not enabled for this exam.', 'wp-cbt-pro'), ['status' => 400]);
+        }
+
+        if ($attempt['status'] !== 'in_progress') {
+            return new \WP_REST_Response(['strikes' => 0, 'submitted' => false, 'message' => '']);
+        }
+
+        $violationType = MonitoringViolationType::tryFrom((string) $request->get_param('violation_type'));
+        if ($violationType === null) {
+            return new \WP_Error('wpcbtpro_invalid_violation', __('Unknown violation type.', 'wp-cbt-pro'), ['status' => 400]);
+        }
+
+        $result = $this->autoMonitoring->recordViolation($exam, $attempt, $violationType->value);
+
+        return new \WP_REST_Response($result);
+    }
+
+    /** @return array{strikes:int, submitted:bool, message:string}|null */
+    private function applyDisconnectPolicy(CameraEventType $type, array $exam, array $attempt): ?array
     {
         if ($attempt['status'] !== 'in_progress' && $attempt['status'] !== 'paused') {
-            return;
+            return null;
         }
 
         if ($type === CameraEventType::Reconnected) {
             $this->attemptService->resumeAttemptIfPaused($attempt);
-            return;
+            return null;
         }
 
         if ($type !== CameraEventType::Disconnected || $attempt['status'] !== 'in_progress') {
-            return;
+            return null;
+        }
+
+        if (!empty($exam['auto_monitoring_enabled'])) {
+            // Already logged by recordEvent() just above in handleEvent() —
+            // this only counts what's there and decides, it doesn't log again.
+            return $this->autoMonitoring->evaluateStrikes($exam, $attempt);
         }
 
         $policy = get_option('wpcbtpro_settings')['camera_disconnect_policy'] ?? 'log';
@@ -140,5 +192,7 @@ final class CameraRestController implements RestController
             $this->attemptService->pauseAttempt($attempt);
         }
         // 'log' (default): the event is already recorded above; no state change.
+
+        return null;
     }
 }

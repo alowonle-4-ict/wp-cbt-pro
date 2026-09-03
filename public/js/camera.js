@@ -54,7 +54,49 @@
             credentials: 'same-origin',
             headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': wpcbtproExam.nonce },
             body: JSON.stringify({ attempt_id: attemptId, event_type: eventType, context: context || {} }),
-        }).catch(function () { /* best-effort; the server also expires attempts lazily */ });
+        })
+            .then(function (response) { return response.json(); })
+            .then(function (body) {
+                if (body && body.monitoring) {
+                    handleMonitoringResult(body.monitoring);
+                }
+            })
+            .catch(function () { /* best-effort; the server also expires attempts lazily */ });
+    }
+
+    function postMonitoringViolation(attemptId, violationType) {
+        return fetch(wpcbtproExam.restUrl + '/monitoring-violation', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': wpcbtproExam.nonce },
+            body: JSON.stringify({ attempt_id: attemptId, violation_type: violationType }),
+        })
+            .then(function (response) { return response.json(); })
+            .then(function (body) {
+                if (body) {
+                    handleMonitoringResult(body);
+                }
+            })
+            .catch(function () {});
+    }
+
+    function handleMonitoringResult(result) {
+        var banner = document.querySelector('[data-wpcbtpro-monitoring-warning]');
+        if (!result || !result.message) {
+            return;
+        }
+
+        if (banner) {
+            banner.textContent = result.message;
+            banner.classList.remove('wpcbtpro-hidden');
+        }
+
+        if (result.submitted) {
+            if (banner) {
+                banner.textContent = result.message + ' ' + (strings.monitoringSubmitted || '');
+            }
+            window.location.reload();
+        }
     }
 
     function postSnapshot(attemptId, dataUrl) {
@@ -211,6 +253,109 @@
                 }
             }, config.snapshotIntervalSeconds * 1000);
         }
+
+        if (config.autoMonitoringEnabled && config.referencePhotoUrl && config.snapshotIntervalSeconds > 0) {
+            initAutoMonitoring(config, preview);
+        }
+    }
+
+    /**
+     * "Warn 3 times, then submit" (server-decided — see AutoMonitoringService).
+     * Everything here only ever reports what a check saw; the browser never
+     * decides to submit anything itself. Runs the face comparison entirely
+     * client-side via face-api.js — no image or descriptor is sent to any
+     * third party, only the /monitoring-violation report (attempt id + which
+     * kind of violation), the same shape as every other camera event already
+     * reported here.
+     */
+    function initAutoMonitoring(config, preview) {
+        var FACE_MATCH_DISTANCE_THRESHOLD = 0.6; // face-api.js's own recommended cutoff
+        var referenceDescriptor = null;
+        var modelsReady = false;
+
+        function loadScript(src) {
+            return new Promise(function (resolve, reject) {
+                var script = document.createElement('script');
+                script.src = src;
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+
+        function loadModels() {
+            var modelsUrl = window.wpcbtproFaceApiModelsUrl;
+            return Promise.all([
+                faceapi.nets.tinyFaceDetector.loadFromUri(modelsUrl),
+                faceapi.nets.faceLandmark68Net.loadFromUri(modelsUrl),
+                faceapi.nets.faceRecognitionNet.loadFromUri(modelsUrl),
+            ]);
+        }
+
+        function detectDescriptor(input) {
+            return faceapi
+                .detectSingleFace(input, new faceapi.TinyFaceDetectorOptions())
+                .withFaceLandmarks()
+                .withFaceDescriptor();
+        }
+
+        function loadReferenceDescriptor() {
+            return new Promise(function (resolve, reject) {
+                var img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = function () {
+                    detectDescriptor(img).then(function (result) {
+                        if (!result) {
+                            reject(new Error('no face found in reference photo'));
+                            return;
+                        }
+                        resolve(result.descriptor);
+                    }, reject);
+                };
+                img.onerror = reject;
+                img.src = config.referencePhotoUrl;
+            });
+        }
+
+        function runCheck() {
+            if (!modelsReady || !referenceDescriptor || !activeStream || !preview || !preview.videoWidth) {
+                return;
+            }
+
+            detectDescriptor(preview).then(function (result) {
+                if (!result) {
+                    postMonitoringViolation(config.attemptId, 'NO_FACE_DETECTED');
+                    return;
+                }
+
+                var distance = faceapi.euclideanDistance(referenceDescriptor, result.descriptor);
+                if (distance > FACE_MATCH_DISTANCE_THRESHOLD) {
+                    postMonitoringViolation(config.attemptId, 'FACE_MISMATCH');
+                }
+            }, function () {
+                // A detection error (e.g. a mid-frame decode glitch) is not
+                // itself evidence of anything — skip this tick rather than
+                // reporting a false violation.
+            });
+        }
+
+        loadScript(window.wpcbtproFaceApiSrc)
+            .then(loadModels)
+            .then(function () {
+                modelsReady = true;
+                return loadReferenceDescriptor();
+            })
+            .then(function (descriptor) {
+                referenceDescriptor = descriptor;
+                setInterval(runCheck, config.snapshotIntervalSeconds * 1000);
+            })
+            .catch(function () {
+                var banner = document.querySelector('[data-wpcbtpro-monitoring-warning]');
+                if (banner && strings.monitoringLoadError) {
+                    banner.textContent = strings.monitoringLoadError;
+                    banner.classList.remove('wpcbtpro-hidden');
+                }
+            });
     }
 
     /** ---- Identity verification interstitial (exam-verify.php) ---- */

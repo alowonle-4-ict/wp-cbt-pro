@@ -104,6 +104,7 @@ final class ExamService
             'identity_verification' => !empty($input['identity_verification']) ? 1 : 0,
             'snapshot_interval_seconds' => !empty($input['snapshot_interval_seconds'])
                 ? (int) $input['snapshot_interval_seconds'] : null,
+            'auto_monitoring_enabled' => !empty($input['auto_monitoring_enabled']) ? 1 : 0,
             'fullscreen_required' => !empty($input['fullscreen_required']) ? 1 : 0,
             'result_visibility' => in_array($input['result_visibility'] ?? 'immediate', self::RESULT_VISIBILITIES, true)
                 ? $input['result_visibility'] : 'immediate',

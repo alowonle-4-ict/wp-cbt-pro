@@ -21,6 +21,7 @@ $photoId = (int) ($candidate['photo_attachment_id'] ?? 0);
 $serverNow = current_time('timestamp');
 $serverEnd = strtotime($attempt['server_end']);
 $cameraRequired = !empty($exam['camera_required']);
+$autoMonitoringEnabled = !empty($exam['auto_monitoring_enabled']) && $photoId > 0;
 ?>
 <script type="application/json" id="wpcbtpro-camera-config">
 <?php echo wp_json_encode([
@@ -28,6 +29,8 @@ $cameraRequired = !empty($exam['camera_required']);
     'cameraRequired' => $cameraRequired,
     'microphoneMode' => $exam['microphone_mode'] ?? 'off',
     'snapshotIntervalSeconds' => !empty($exam['snapshot_interval_seconds']) ? (int) $exam['snapshot_interval_seconds'] : 0,
+    'autoMonitoringEnabled' => $autoMonitoringEnabled,
+    'referencePhotoUrl' => $autoMonitoringEnabled ? wp_get_attachment_image_url($photoId, 'medium') : null,
 ]); ?>
 </script>
 <div class="wpcbtpro-exam wpcbtpro-exam--running"
@@ -59,6 +62,10 @@ $cameraRequired = !empty($exam['camera_required']);
             <span class="wpcbtpro-timer__value" data-wpcbtpro-timer>--:--</span>
         </div>
     </header>
+
+    <?php if ($autoMonitoringEnabled): ?>
+        <div class="wpcbtpro-notice wpcbtpro-notice--error wpcbtpro-hidden" data-wpcbtpro-monitoring-warning role="alert" aria-live="assertive"></div>
+    <?php endif; ?>
 
     <nav class="wpcbtpro-palette" aria-label="<?php esc_attr_e('Question palette', 'wp-cbt-pro'); ?>">
         <?php foreach ($resolvedIds as $i => $qid):

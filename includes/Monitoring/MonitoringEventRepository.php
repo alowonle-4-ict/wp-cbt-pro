@@ -70,6 +70,40 @@ final class MonitoringEventRepository
         return $byAttempt;
     }
 
+    /** @param string[] $eventTypes */
+    public function countByTypes(int $attemptId, array $eventTypes): int
+    {
+        global $wpdb;
+
+        if ($eventTypes === []) {
+            return 0;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($eventTypes), '%s'));
+        return (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM {$this->table()} WHERE attempt_id = %d AND event_type IN ({$placeholders})",
+            array_merge([$attemptId], $eventTypes)
+        ));
+    }
+
+    /** @param string[] $eventTypes */
+    public function latestTypeForAttempt(int $attemptId, array $eventTypes): ?string
+    {
+        global $wpdb;
+
+        if ($eventTypes === []) {
+            return null;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($eventTypes), '%s'));
+        $type = $wpdb->get_var($wpdb->prepare(
+            "SELECT event_type FROM {$this->table()} WHERE attempt_id = %d AND event_type IN ({$placeholders}) ORDER BY id DESC LIMIT 1",
+            array_merge([$attemptId], $eventTypes)
+        ));
+
+        return $type !== null ? (string) $type : null;
+    }
+
     /**
      * @return array<int, array<string, mixed>>
      */

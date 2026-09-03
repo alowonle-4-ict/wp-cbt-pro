@@ -50,6 +50,7 @@ use WPCBTPro\Import\Word\WordImportAdminController;
 use WPCBTPro\Import\Word\WordImportService;
 use WPCBTPro\Institutions\InstitutionContext;
 use WPCBTPro\Institutions\InstitutionRepository;
+use WPCBTPro\Monitoring\AutoMonitoringService;
 use WPCBTPro\Monitoring\InvigilatorDashboardController;
 use WPCBTPro\Monitoring\MonitoringEventRepository;
 use WPCBTPro\Privacy\PrivacyEraseService;
@@ -445,6 +446,13 @@ final class Plugin
         $this->container->set(VerificationRepository::class, static fn () => new VerificationRepository());
         $this->container->set(MonitoringEventRepository::class, static fn () => new MonitoringEventRepository());
         $this->container->set(Base64ImageUploader::class, static fn () => new Base64ImageUploader());
+        $this->container->set(
+            AutoMonitoringService::class,
+            fn (ServiceContainer $c) => new AutoMonitoringService(
+                $c->get(MonitoringEventRepository::class),
+                $c->get(AttemptService::class)
+            )
+        );
 
         // Bound to the interface, not the concrete class, so a Pro/Enterprise
         // AI-assisted provider can re-register this same key (§11–§12, §23)
@@ -466,7 +474,8 @@ final class Plugin
                 $c->get(AttemptService::class),
                 $c->get(AttemptOwnershipGuard::class),
                 $c->get(CurrentCandidateResolver::class),
-                $c->get(CandidateRepository::class)
+                $c->get(CandidateRepository::class),
+                $c->get(AutoMonitoringService::class)
             )
         );
 

@@ -294,6 +294,21 @@ final class ExamRuntimeController
             'window.wpcbtproMonacoLoaderSrc = ' . wp_json_encode($monacoLoaderSrc) . ';',
             'before'
         );
+
+        // Loaded on demand by camera.js — only exams with automated
+        // monitoring turned on ever inject this script tag — not
+        // unconditionally on every exam page. Runs entirely in the
+        // candidate's browser; no image or descriptor is sent to this CDN
+        // or any third party, only used to load the library and its
+        // pre-trained model weights once.
+        $faceApiSrc = apply_filters('wpcbtpro_faceapi_src', 'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js');
+        $faceApiModelsUrl = apply_filters('wpcbtpro_faceapi_models_url', 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights');
+        wp_add_inline_script(
+            'wpcbtpro-camera',
+            'window.wpcbtproFaceApiSrc = ' . wp_json_encode($faceApiSrc) . ';'
+            . 'window.wpcbtproFaceApiModelsUrl = ' . wp_json_encode($faceApiModelsUrl) . ';',
+            'before'
+        );
         wp_localize_script('wpcbtpro-exam', 'wpcbtproExam', [
             'restUrl' => esc_url_raw(rest_url(RestServiceProvider::NAMESPACE_V1)),
             'nonce' => wp_create_nonce('wp_rest'),
@@ -312,6 +327,8 @@ final class ExamRuntimeController
                 'reconnected' => __('Camera reconnected.', 'wp-cbt-pro'),
                 'unsupported' => __('This browser does not support camera access.', 'wp-cbt-pro'),
                 'insecure' => __('Camera access requires a secure (HTTPS) connection.', 'wp-cbt-pro'),
+                'monitoringLoadError' => __('Automated monitoring could not start in this browser. Your exam will continue without it.', 'wp-cbt-pro'),
+                'monitoringSubmitted' => __('Your exam is being submitted…', 'wp-cbt-pro'),
             ],
         ]);
     }
