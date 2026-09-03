@@ -9,6 +9,7 @@ use WPCBTPro\Core\Plugin;
 use WPCBTPro\Exams\ExamRepository;
 use WPCBTPro\Institutions\InstitutionRepository;
 use WPCBTPro\Questions\QuestionRepository;
+use WPCBTPro\Results\ResultRepository;
 use WPCBTPro\Results\ResultsExportService;
 
 /**
@@ -93,6 +94,39 @@ final class ResultsExportServiceTest extends \WP_UnitTestCase
         return ['exam_id' => $examId, 'candidate_id' => $candidateId];
     }
 
+    /** Records another submitted attempt + result for an existing candidate/exam pair. */
+    private function addAnotherAttempt(int $examId, int $candidateId, float $percentage): void
+    {
+        global $wpdb;
+
+        $now = current_time('mysql');
+        $wpdb->insert($wpdb->prefix . 'cbt_attempts', [
+            'exam_id' => $examId,
+            'candidate_id' => $candidateId,
+            'seed' => 'seed-' . $percentage,
+            'server_start' => $now,
+            'server_end' => $now,
+            'submitted_at' => $now,
+            'status' => 'submitted',
+            'created_at' => $now,
+        ]);
+        $attemptId = (int) $wpdb->insert_id;
+
+        $wpdb->insert($wpdb->prefix . 'cbt_results', [
+            'attempt_id' => $attemptId,
+            'score' => $percentage / 100,
+            'percentage' => $percentage,
+            'grade' => $percentage >= 50 ? 'B' : 'F',
+            'pass_status' => $percentage >= 50 ? 'pass' : 'fail',
+            'correct_count' => 0,
+            'incorrect_count' => 1,
+            'unanswered_count' => 0,
+            'pending_review_count' => 0,
+            'status' => 'final',
+            'time_used_seconds' => 90,
+        ]);
+    }
+
     public function testBuildRowsMapsOneRowPerResultInColumnOrder(): void
     {
         $fixture = $this->makeExamWithOneResult();
@@ -134,6 +168,53 @@ final class ResultsExportServiceTest extends \WP_UnitTestCase
 
         self::assertSame(ResultsExportService::COLUMNS, $sheetArray[0]);
         self::assertSame('Export Candidate', $sheetArray[1][0]);
+    }
+
+    public function testBuildRowsExportsOnlyTheCandidatesBestAttemptWhenTheyHaveSeveral(): void
+    {
+        $fixture = $this->makeExamWithOneResult(); // first attempt: 100%
+        $this->addAnotherAttempt($fixture['exam_id'], $fixture['candidate_id'], 40.0);
+        $this->addAnotherAttempt($fixture['exam_id'], $fixture['candidate_id'], 75.0);
+
+        // The admin results list shows every attempt — confirm all three are
+        // really there before checking that export collapses them.
+        $resultRepository = new ResultRepository();
+        self::assertCount(3, $resultRepository->allForExam($fixture['exam_id']));
+
+        /** @var ResultsExportService $service */
+        $service = Plugin::instance()->container()->get(ResultsExportService::class);
+        $rows = $service->buildRows($fixture['exam_id']);
+
+        self::assertCount(1, $rows, 'Only the candidate\'s best attempt should be exported.');
+        self::assertSame(100.0, (float) $rows[0][6], 'The 100% attempt is the best one and should be the row exported.');
+    }
+
+    public function testBuildRowsExportsEachCandidatesOwnBestAttemptSeparately(): void
+    {
+        global $wpdb;
+
+        $fixture = $this->makeExamWithOneResult(); // candidate A: 100%
+        $this->addAnotherAttempt($fixture['exam_id'], $fixture['candidate_id'], 40.0);
+
+        $institutionId = (new InstitutionRepository())->ensureDefault();
+        $candidateB = (new CandidateRepository())->insert([
+            'institution_id' => $institutionId,
+            'candidate_ref' => 'CBT-EXPORT-B-' . wp_generate_password(6, false, false),
+            'first_name' => 'Second',
+            'last_name' => 'Candidate',
+            'status' => 'active',
+        ]);
+        $this->addAnotherAttempt($fixture['exam_id'], $candidateB, 60.0);
+        $this->addAnotherAttempt($fixture['exam_id'], $candidateB, 85.0);
+
+        /** @var ResultsExportService $service */
+        $service = Plugin::instance()->container()->get(ResultsExportService::class);
+        $rows = $service->buildRows($fixture['exam_id']);
+
+        self::assertCount(2, $rows, 'One row per candidate, not per attempt.');
+        $percentages = array_map(static fn (array $row): float => (float) $row[6], $rows);
+        sort($percentages);
+        self::assertSame([85.0, 100.0], $percentages);
     }
 
     public function testBuildSpreadsheetWithNoResultsStillProducesAHeaderOnlyFile(): void

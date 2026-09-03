@@ -27,18 +27,37 @@ final class ResultsExportService
     ) {
     }
 
-    /** @return array<int, array<int, mixed>> one row per result, in COLUMNS order */
+    /**
+     * One row per candidate's best attempt, in COLUMNS order. The results
+     * list (ResultsAdminController) shows every attempt a candidate made —
+     * a multi-attempt candidate is a real, intended thing here — but an
+     * exported result sheet is read as one row per candidate, so only the
+     * highest-scoring attempt goes in. ResultRepository::allForExam()
+     * already orders by percentage DESC, so the first row seen for a given
+     * candidate_id is their best attempt; later ones for the same
+     * candidate are skipped.
+     *
+     * @return array<int, array<int, mixed>>
+     */
     public function buildRows(int $examId): array
     {
         $examResults = $this->results->allForExam($examId);
         $candidates = $this->candidates->findMany(array_column($examResults, 'candidate_id'));
 
         $rows = [];
+        $seenCandidateIds = [];
         foreach ($examResults as $result) {
-            $candidate = $candidates[(int) $result['candidate_id']] ?? null;
+            $candidateId = (int) $result['candidate_id'];
+            if (isset($seenCandidateIds[$candidateId])) {
+                continue;
+            }
+
+            $candidate = $candidates[$candidateId] ?? null;
             if ($candidate === null) {
                 continue;
             }
+
+            $seenCandidateIds[$candidateId] = true;
 
             $rows[] = [
                 trim($candidate['first_name'] . ' ' . $candidate['last_name']),
