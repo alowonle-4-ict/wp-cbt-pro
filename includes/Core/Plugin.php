@@ -163,6 +163,7 @@ final class Plugin
         $this->container->get(ExamRuntimeController::class)->register();
         $this->container->get(CandidateLoginController::class)->register();
         $this->container->get(ResultsExportController::class)->register();
+        $this->container->get(FullScreenTemplateController::class)->register();
     }
 
     public function container(): ServiceContainer
@@ -334,6 +335,7 @@ final class Plugin
         );
 
         $this->container->set(ExecutionSettingsController::class, static fn () => new ExecutionSettingsController());
+        $this->container->set(FullScreenTemplateController::class, static fn () => new FullScreenTemplateController());
 
         $this->container->set(
             AdminMenu::class,
