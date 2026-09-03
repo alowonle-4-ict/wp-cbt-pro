@@ -176,6 +176,74 @@ final class CandidateBulkImportTest extends \WP_UnitTestCase
         self::assertNotEmpty($rows[0]['warnings']);
     }
 
+    public function testRegistrationNumberBecomesTheLoginUsernameNotEmail(): void
+    {
+        $institutionId = (new InstitutionRepository())->ensureDefault();
+        $email = 'bulk-username-' . wp_generate_password(8, false) . '@example.org';
+
+        $path = $this->writeSheet(
+            ['First Name', 'Last Name', 'Email', 'Registration Number', 'Password'],
+            [['Ada', 'Lovelace', $email, '2024/CS/REG-001', 'Sup3rSecret!']]
+        );
+
+        /** @var CandidateBulkImportService $service */
+        $service = Plugin::instance()->container()->get(CandidateBulkImportService::class);
+
+        try {
+            $rows = $service->parseFile($path, $institutionId);
+        } finally {
+            unlink($path);
+        }
+
+        $result = $service->import($rows[0]);
+        $candidate = (new CandidateRepository())->find($result['candidate_id']);
+        $user = get_user_by('id', (int) $candidate['wp_user_id']);
+
+        self::assertNotFalse($user);
+        self::assertSame('2024csreg-001', $user->user_login, 'sanitize_user() strips the slashes but the registration number is otherwise used as-is.');
+        self::assertNotSame($email, $user->user_login, 'The username should be the registration number, not the email.');
+    }
+
+    public function testMultipleCandidatesCanShareTheSameEmailAddress(): void
+    {
+        $institutionId = (new InstitutionRepository())->ensureDefault();
+        $sharedEmail = 'family-' . wp_generate_password(8, false) . '@example.org';
+
+        $path = $this->writeSheet(
+            ['First Name', 'Last Name', 'Email', 'Registration Number', 'Password'],
+            [
+                ['First', 'Sibling', $sharedEmail, 'SHARED-REG-001', 'Sup3rSecret1!'],
+                ['Second', 'Sibling', $sharedEmail, 'SHARED-REG-002', 'Sup3rSecret2!'],
+            ]
+        );
+
+        /** @var CandidateBulkImportService $service */
+        $service = Plugin::instance()->container()->get(CandidateBulkImportService::class);
+
+        try {
+            $rows = $service->parseFile($path, $institutionId);
+        } finally {
+            unlink($path);
+        }
+
+        $firstResult = $service->import($rows[0]);
+        $secondResult = $service->import($rows[1]);
+
+        self::assertArrayHasKey('candidate_id', $firstResult);
+        self::assertArrayHasKey('candidate_id', $secondResult, 'The second account, sharing the same email, must still be created successfully.');
+
+        $firstCandidate = (new CandidateRepository())->find($firstResult['candidate_id']);
+        $secondCandidate = (new CandidateRepository())->find($secondResult['candidate_id']);
+        $firstUser = get_user_by('id', (int) $firstCandidate['wp_user_id']);
+        $secondUser = get_user_by('id', (int) $secondCandidate['wp_user_id']);
+
+        self::assertNotFalse($firstUser);
+        self::assertNotFalse($secondUser);
+        self::assertSame($sharedEmail, $firstUser->user_email);
+        self::assertSame($sharedEmail, $secondUser->user_email);
+        self::assertNotSame($firstUser->ID, $secondUser->ID, 'Two genuinely distinct WordPress accounts.');
+    }
+
     public function testBlankRowsAreSkipped(): void
     {
         $institutionId = (new InstitutionRepository())->ensureDefault();

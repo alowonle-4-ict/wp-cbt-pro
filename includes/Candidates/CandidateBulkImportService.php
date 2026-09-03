@@ -168,12 +168,23 @@ final class CandidateBulkImportService
     /** @param array<string, mixed> $input */
     private function createWpUser(array $input, string $password): int|\WP_Error
     {
-        $username = $this->generateUsername((string) $input['first_name'], (string) $input['last_name']);
+        $username = $this->generateUsername(
+            (string) $input['first_name'],
+            (string) $input['last_name'],
+            (string) ($input['registration_number'] ?? '')
+        );
         // A candidate with no email still gets a real, sign-in-able account —
         // the .invalid TLD is IANA-reserved specifically for placeholders
         // like this that must look like an email but will never be mailed.
         $email = $input['email'] !== '' ? $input['email'] : $username . '@candidates.wpcbtpro.invalid';
 
+        // Institutions commonly issue the same family/shared email address
+        // to several candidates. WordPress enforces email uniqueness on
+        // wp_insert_user() by default, so it's lifted here — narrowly, for
+        // this one insert only — rather than site-wide, since candidates
+        // sign in with their registration number as the username, not by
+        // email, so a shared email causes no ambiguity at login.
+        add_filter('email_exists', '__return_false', 20);
         $userId = wp_insert_user([
             'user_login' => $username,
             'user_email' => $email,
@@ -183,13 +194,24 @@ final class CandidateBulkImportService
             'display_name' => trim($input['first_name'] . ' ' . $input['last_name']),
             'role' => 'subscriber',
         ]);
+        remove_filter('email_exists', '__return_false', 20);
 
         return is_wp_error($userId) ? $userId : (int) $userId;
     }
 
-    private function generateUsername(string $firstName, string $lastName): string
+    /**
+     * The candidate's own registration number doubles as their login
+     * username too, matching how it's already used as their Candidate ID
+     * (CandidateService::resolveCandidateRef()) — one identifier a
+     * candidate actually recognizes, instead of a generated
+     * firstname.lastname or their email. Falls back to firstname.lastname
+     * only when there's no registration number to use.
+     */
+    private function generateUsername(string $firstName, string $lastName, string $registrationNumber = ''): string
     {
-        $base = sanitize_user(strtolower($firstName . '.' . $lastName), true);
+        $base = $registrationNumber !== ''
+            ? sanitize_user(strtolower($registrationNumber), true)
+            : sanitize_user(strtolower($firstName . '.' . $lastName), true);
         if ($base === '') {
             $base = 'candidate';
         }

@@ -19,7 +19,7 @@ if (!defined('ABSPATH')) {
         <input type="hidden" name="redirect_to" value="<?php echo esc_attr($redirectTo); ?>">
 
         <p>
-            <label for="wpcbtpro_login_user"><?php esc_html_e('Username or email', 'wp-cbt-pro'); ?></label><br>
+            <label for="wpcbtpro_login_user"><?php esc_html_e('Registration Number', 'wp-cbt-pro'); ?></label><br>
             <input type="text" id="wpcbtpro_login_user" name="wpcbtpro_login_user" class="regular-text" required autocomplete="username">
         </p>
         <p>
@@ -29,6 +29,4 @@ if (!defined('ABSPATH')) {
 
         <button type="submit" class="wpcbtpro-btn wpcbtpro-btn--primary"><?php esc_html_e('Sign In', 'wp-cbt-pro'); ?></button>
     </form>
-
-    <p><a href="<?php echo esc_url(wp_lostpassword_url()); ?>"><?php esc_html_e('Forgot your password?', 'wp-cbt-pro'); ?></a></p>
 </div>
