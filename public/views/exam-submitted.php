@@ -50,6 +50,6 @@ if (!defined('ABSPATH')) {
     <?php endif; ?>
 
     <p class="wpcbtpro-submitted__logout">
-        <a href="<?php echo esc_url(wp_logout_url(home_url('/'))); ?>" class="wpcbtpro-btn"><?php esc_html_e('Log out', 'wp-cbt-pro'); ?></a>
+        <a href="<?php echo esc_url(wp_logout_url(\WPCBTPro\Candidates\CandidateLoginController::loginUrl(''))); ?>" class="wpcbtpro-btn"><?php esc_html_e('Log out', 'wp-cbt-pro'); ?></a>
     </p>
 </div>
