@@ -16,11 +16,55 @@ body.wpcbtpro-fullscreen {
     box-shadow: 0 1px 4px rgba(26, 31, 41, 0.08);
 }
 
+/* This card is meant to look the same regardless of the site's active
+   theme — it renders through the bare full-screen template (no theme
+   header/footer), but wp_head() still loads the theme's own stylesheet,
+   and many themes apply their own global font-family/size to bare h2/h3
+   tags. !important here is deliberate: without it, an unrelated theme's
+   typography silently wins the cascade and this card stops looking like
+   part of the same product from one install to the next. */
+.wpcbtpro-exam h2,
+.wpcbtpro-exam h3 {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+    font-weight: 600 !important;
+    line-height: 1.3;
+}
+
+.wpcbtpro-exam h2 {
+    font-size: 22px !important;
+    margin: 0 0 16px;
+}
+
+.wpcbtpro-exam h3 {
+    font-size: 15px !important;
+    margin: 24px 0 8px;
+}
+
 /* The exam name heading (start, paused, submitted screens) — not
    .wpcbtpro-exam__title, which sits in the in-progress header's flex bar
    next to the timer and needs to stay left-aligned there. */
 .wpcbtpro-exam > h2 {
+    text-align: center !important;
+}
+
+/* The informational "card" screens (start, paused, submitted) — centered
+   top to bottom, matching how a candidate reads them: name/photo, then
+   the exam itself, then what to do next. Not applied to the in-progress
+   exam screen, where questions and options are left-aligned reading text. */
+.wpcbtpro-exam--start,
+.wpcbtpro-exam--paused,
+.wpcbtpro-exam--submitted {
     text-align: center;
+}
+
+.wpcbtpro-exam--start .wpcbtpro-candidate-card,
+.wpcbtpro-exam--paused .wpcbtpro-candidate-card,
+.wpcbtpro-exam--submitted .wpcbtpro-candidate-card {
+    justify-content: center;
+}
+
+.wpcbtpro-exam--start .wpcbtpro-system-check {
+    text-align: left;
 }
 
 .wpcbtpro-notice {
